@@ -28,7 +28,7 @@ async fn simple_text_response() {
     let msg = make_inbound_msg("Hi there");
     let mut session = make_session();
 
-    let reply = runtime.process_message(&msg, &mut session).await.unwrap();
+    let reply = runtime.process_message(&msg, &mut session, None, None).await.unwrap();
     assert_eq!(reply.text, "Hello from the AI!");
     assert_eq!(reply.chat_id, msg.chat_id);
     assert!(reply.reply_to.is_some());
@@ -42,7 +42,7 @@ async fn session_history_grows_after_processing() {
     let mut session = make_session();
 
     assert!(session.history.is_empty());
-    runtime.process_message(&msg, &mut session).await.unwrap();
+    runtime.process_message(&msg, &mut session, None, None).await.unwrap();
 
     // Should have user message + assistant reply in history
     assert_eq!(session.history.len(), 2);
@@ -57,7 +57,7 @@ async fn runtime_with_no_text_in_inbound_msg() {
     msg.text = None;
     let mut session = make_session();
 
-    let reply = runtime.process_message(&msg, &mut session).await.unwrap();
+    let reply = runtime.process_message(&msg, &mut session, None, None).await.unwrap();
     // Empty message with no attachments returns a friendly error
     assert!(reply.text.contains("empty message"));
 }
@@ -76,7 +76,7 @@ async fn provider_called_exactly_once_for_simple_text() {
 
     let msg = make_inbound_msg("hello");
     let mut session = make_session();
-    runtime.process_message(&msg, &mut session).await.unwrap();
+    runtime.process_message(&msg, &mut session, None, None).await.unwrap();
 
     assert_eq!(provider.calls().await, 1);
 }
@@ -123,7 +123,7 @@ async fn runtime_with_memory_entries() {
 
     let msg = make_inbound_msg("Tell me about Rust");
     let mut session = make_session();
-    let reply = runtime.process_message(&msg, &mut session).await.unwrap();
+    let reply = runtime.process_message(&msg, &mut session, None, None).await.unwrap();
 
     assert_eq!(reply.text, "I remember about Rust!");
 
@@ -143,7 +143,7 @@ async fn multiple_messages_in_sequence() {
 
     for i in 0..3 {
         let msg = make_inbound_msg(&format!("Message {i}"));
-        let reply = runtime.process_message(&msg, &mut session).await.unwrap();
+        let reply = runtime.process_message(&msg, &mut session, None, None).await.unwrap();
         assert_eq!(reply.text, "Reply");
     }
 

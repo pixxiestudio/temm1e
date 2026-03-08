@@ -4249,6 +4249,8 @@ dependencies = [
  "async-trait",
  "bytes",
  "chromiumoxide",
+ "chrono",
+ "futures",
  "reqwest",
  "serde",
  "serde_json",

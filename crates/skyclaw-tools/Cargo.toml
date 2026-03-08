@@ -7,7 +7,7 @@ rust-version.workspace = true
 description = "Tool integrations for SkyClaw agents"
 
 [features]
-browser = ["dep:chromiumoxide"]
+browser = ["dep:chromiumoxide", "dep:futures"]
 
 [dependencies]
 skyclaw-core.workspace = true
@@ -18,6 +18,8 @@ tracing.workspace = true
 async-trait.workspace = true
 reqwest.workspace = true
 bytes.workspace = true
+chrono.workspace = true
 
 # Optional: Browser automation
 chromiumoxide = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }

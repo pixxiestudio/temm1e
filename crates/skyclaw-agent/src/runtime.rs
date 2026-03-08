@@ -1,7 +1,9 @@
 //! AgentRuntime — main agent loop that processes messages through the
 //! provider, executing tool calls in a loop until a final text reply.
 
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use skyclaw_core::{Memory, Provider, Tool};
 use skyclaw_core::types::error::SkyclawError;
@@ -17,6 +19,9 @@ use crate::executor::execute_tool;
 
 /// Maximum characters per tool output (roughly ~8K tokens).
 const MAX_TOOL_OUTPUT_CHARS: usize = 30_000;
+
+/// Shared pending-message queue (same type as skyclaw_tools::PendingMessages).
+pub type PendingMessages = Arc<std::sync::Mutex<HashMap<String, Vec<String>>>>;
 
 /// The core agent runtime. Holds references to the AI provider, memory backend,
 /// and registered tools.
@@ -48,7 +53,7 @@ impl AgentRuntime {
             system_prompt,
             max_turns: 6,
             max_context_tokens: 30_000,
-            max_tool_rounds: 25,
+            max_tool_rounds: 50,
         }
     }
 
@@ -75,15 +80,19 @@ impl AgentRuntime {
         }
     }
 
-    /// Process an inbound message through the full agent loop:
-    /// 1. Build context (history + memory + tools)
-    /// 2. Call the provider
-    /// 3. If the provider returns tool_use, execute tools and loop
-    /// 4. Return the final text reply as an OutboundMessage
+    /// Process an inbound message through the full agent loop.
+    ///
+    /// - `interrupt`: if set to `true` by another task, the tool loop exits
+    ///   early so the dispatcher can serve a higher-priority message.
+    /// - `pending`: shared queue of user messages that arrived while this task
+    ///   is running. Pending texts are automatically appended to the last tool
+    ///   result each round so the LLM sees them without extra API calls.
     pub async fn process_message(
         &self,
         msg: &InboundMessage,
         session: &mut SessionContext,
+        interrupt: Option<Arc<AtomicBool>>,
+        pending: Option<PendingMessages>,
     ) -> Result<OutboundMessage, SkyclawError> {
         info!(
             channel = %msg.channel,
@@ -135,8 +144,19 @@ impl AgentRuntime {
 
         // Tool-use loop
         let mut rounds = 0;
+        let mut interrupted = false;
         loop {
             rounds += 1;
+
+            // Check for preemption between rounds
+            if let Some(ref flag) = interrupt {
+                if flag.load(Ordering::Relaxed) {
+                    info!("Agent interrupted by higher-priority message after {} rounds", rounds - 1);
+                    interrupted = true;
+                    break;
+                }
+            }
+
             if rounds > self.max_tool_rounds {
                 warn!("Exceeded maximum tool rounds ({}), forcing text reply", self.max_tool_rounds);
                 break;
@@ -229,6 +249,37 @@ impl AgentRuntime {
                 });
             }
 
+            // Inject pending user messages into the last tool result so the
+            // LLM sees them without any extra API call or tool invocation.
+            if let Some(ref pq) = pending {
+                if let Ok(mut map) = pq.lock() {
+                    if let Some(msgs) = map.remove(&msg.chat_id) {
+                        if !msgs.is_empty() {
+                            info!(
+                                count = msgs.len(),
+                                chat_id = %msg.chat_id,
+                                "Injecting pending user messages into tool results"
+                            );
+                            let notice = format!(
+                                "\n\n---\n[PENDING MESSAGES — the user sent new message(s) while you were working. \
+                                 Acknowledge with send_message and decide: finish current task or stop and respond.]\n{}",
+                                msgs.iter()
+                                    .enumerate()
+                                    .map(|(i, t)| format!("  {}. \"{}\"", i + 1, t))
+                                    .collect::<Vec<_>>()
+                                    .join("\n")
+                            );
+                            // Append to last tool result
+                            if let Some(ContentPart::ToolResult { content, .. }) =
+                                tool_result_parts.last_mut()
+                            {
+                                content.push_str(&notice);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Append tool results as a Tool message in history
             session.history.push(ChatMessage {
                 role: Role::Tool,
@@ -239,10 +290,16 @@ impl AgentRuntime {
             // issue more tool calls or produce a final text reply.
         }
 
-        // Fallback: if we exited the loop due to max rounds
+        // Fallback: exited loop due to interruption or max rounds
+        let text = if interrupted {
+            "I was interrupted to handle a new message. I'll pick up where I left off if needed.".to_string()
+        } else {
+            "I reached the maximum number of tool execution steps. Here is what I have so far. Please let me know if you need me to continue.".to_string()
+        };
+
         Ok(OutboundMessage {
             chat_id: msg.chat_id.clone(),
-            text: "I reached the maximum number of tool execution steps. Here is what I have so far. Please let me know if you need me to continue.".to_string(),
+            text,
             reply_to: Some(msg.id.clone()),
             parse_mode: Some(ParseMode::Plain),
         })

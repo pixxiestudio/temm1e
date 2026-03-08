@@ -23,5 +23,5 @@ pub async fn route_message(
         "Routing message to agent runtime"
     );
 
-    agent.process_message(msg, session).await
+    agent.process_message(msg, session, None, None).await
 }
