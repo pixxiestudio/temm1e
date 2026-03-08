@@ -6,6 +6,14 @@
   Built with <a href="https://github.com/nagisanzenin/claude-code-production-grade-plugin">production-grade</a> — the Claude Code plugin for shipping real systems, not just code files.
 </p>
 
+<p align="center">
+  <a href="https://discord.gg/3ux2c5xz"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-905-green.svg" alt="905 tests">
+  <img src="https://img.shields.io/badge/providers-6-red.svg" alt="6 providers">
+</p>
+
 # SkyClaw
 
 Cloud-native Rust AI agent runtime. 38K lines, 905 tests, zero warnings.
@@ -217,6 +225,12 @@ cargo build --release                                      # Release build
  │
 2026-03-08 v0.0.1 ●━━━ Architecture scaffold — 13 crates, 12 traits, research documentation
 ```
+
+## Community
+
+Join the Discord to discuss, share feedback, and get help.
+
+<a href="https://discord.gg/3ux2c5xz"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"></a>
 
 ## Star History
 
