@@ -234,7 +234,8 @@ fn detect_api_key(text: &str) -> Option<DetectedCredential> {
         let p = provider.to_lowercase();
         if p != "http" && p != "https" {
             match p.as_str() {
-                "anthropic" | "openai" | "gemini" | "grok" | "xai" | "openrouter" | "minimax" => {
+                "anthropic" | "openai" | "gemini" | "grok" | "xai" | "openrouter" | "minimax"
+                | "ollama" => {
                     if key.len() >= 8 && !is_placeholder_key(key) {
                         return Some(DetectedCredential {
                             provider: match p.as_str() {
@@ -244,6 +245,7 @@ fn detect_api_key(text: &str) -> Option<DetectedCredential> {
                                 "grok" | "xai" => "grok",
                                 "openrouter" => "openrouter",
                                 "minimax" => "minimax",
+                                "ollama" => "ollama",
                                 _ => unreachable!(),
                             },
                             api_key: key.to_string(),
@@ -380,6 +382,7 @@ fn normalize_provider_name(name: &str) -> Option<&'static str> {
         "grok" | "xai" => Some("grok"),
         "openrouter" => Some("openrouter"),
         "minimax" => Some("minimax"),
+        "ollama" => Some("ollama"),
         _ => None,
     }
 }
@@ -393,6 +396,7 @@ fn default_model(provider_name: &str) -> &'static str {
         "grok" | "xai" => "grok-4-1-fast-non-reasoning",
         "openrouter" => "anthropic/claude-sonnet-4-6",
         "minimax" => "MiniMax-M2.5",
+        "ollama" => "llama3.3",
         _ => "claude-sonnet-4-6",
     }
 }
@@ -595,12 +599,14 @@ xai-...        \u{2192} Grok\n\
 sk-or-...      \u{2192} OpenRouter\n\n\
 2\u{fe0f}\u{20e3} Explicit (for keys without unique prefix):\n\
 minimax:YOUR_KEY\n\
-openrouter:YOUR_KEY\n\n\
+openrouter:YOUR_KEY\n\
+ollama:YOUR_KEY\n\n\
 3\u{fe0f}\u{20e3} Proxy / custom endpoint:\n\
 proxy <provider> <base_url> <api_key>\n\n\
 Example:\n\
 proxy openai https://my-proxy.com/v1 sk-xxx\n\
-proxy anthropic https://gateway.ai/v1/anthropic sk-ant-xxx";
+proxy anthropic https://gateway.ai/v1/anthropic sk-ant-xxx\n\
+proxy ollama https://ollama.com/v1 your-ollama-key";
 
 const SYSTEM_PROMPT_BASE: &str = "\
 You are SkyClaw, a cloud-native AI agent running on a remote server. \
@@ -2394,6 +2400,13 @@ mod tests {
     }
 
     #[test]
+    fn explicit_ollama_key() {
+        let result = detect_api_key("ollama:some-long-ollama-api-key").unwrap();
+        assert_eq!(result.provider, "ollama");
+        assert_eq!(result.api_key, "some-long-ollama-api-key");
+    }
+
+    #[test]
     fn explicit_format_case_insensitive() {
         let result = detect_api_key("MiniMax:eyJhbGciOiJSUzI1NiIsInR5cCI6");
         assert_eq!(result.unwrap().provider, "minimax");
@@ -2478,6 +2491,7 @@ mod tests {
         assert_eq!(default_model("xai"), "grok-4-1-fast-non-reasoning");
         assert_eq!(default_model("openrouter"), "anthropic/claude-sonnet-4-6");
         assert_eq!(default_model("minimax"), "MiniMax-M2.5");
+        assert_eq!(default_model("ollama"), "llama3.3");
     }
 
     #[test]

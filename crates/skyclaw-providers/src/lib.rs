@@ -92,6 +92,17 @@ pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn Provider>, Sky
                 .with_extra_headers(config.extra_headers.clone());
             Ok(Box::new(provider))
         }
+        "ollama" => {
+            let base_url = config
+                .base_url
+                .clone()
+                .unwrap_or_else(|| "https://ollama.com/v1".to_string());
+            let provider = OpenAICompatProvider::new(api_key)
+                .with_keys(all_keys)
+                .with_base_url(base_url)
+                .with_extra_headers(config.extra_headers.clone());
+            Ok(Box::new(provider))
+        }
         _ => {
             let mut provider = OpenAICompatProvider::new(api_key)
                 .with_keys(all_keys)
@@ -153,6 +164,12 @@ mod tests {
     #[test]
     fn create_minimax_provider() {
         let provider = create_provider(&config_with_name("minimax")).unwrap();
+        assert_eq!(provider.name(), "openai-compatible");
+    }
+
+    #[test]
+    fn create_ollama_provider() {
+        let provider = create_provider(&config_with_name("ollama")).unwrap();
         assert_eq!(provider.name(), "openai-compatible");
     }
 

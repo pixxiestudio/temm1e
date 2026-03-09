@@ -140,7 +140,8 @@ impl OpenAICompatProvider {
 
 #[derive(Debug, Deserialize)]
 struct OpenAIResponse {
-    id: String,
+    #[serde(default)]
+    id: Option<String>,
     choices: Vec<OpenAIChoice>,
     usage: Option<OpenAIUsage>,
 }
@@ -443,8 +444,25 @@ impl Provider for OpenAICompatProvider {
             )));
         }
 
-        let api_response: OpenAIResponse = response.json().await.map_err(|e| {
-            SkyclawError::Provider(format!("Failed to parse OpenAI-compat response: {e}"))
+        // Read the body first so we can log it on parse failure
+        let body_text = response.text().await.map_err(|e| {
+            SkyclawError::Provider(format!("Failed to read OpenAI-compat response body: {e}"))
+        })?;
+
+        let api_response: OpenAIResponse = serde_json::from_str(&body_text).map_err(|e| {
+            error!(
+                provider = "openai-compat",
+                body = %body_text,
+                "Response parse failure — raw body logged above"
+            );
+            SkyclawError::Provider(format!(
+                "Failed to parse OpenAI-compat response: {e}\nRaw body: {}",
+                if body_text.len() > 500 {
+                    format!("{}...", &body_text[..500])
+                } else {
+                    body_text.clone()
+                }
+            ))
         })?;
 
         let choice = api_response
@@ -483,7 +501,7 @@ impl Provider for OpenAICompatProvider {
             .unwrap_or_default();
 
         Ok(CompletionResponse {
-            id: api_response.id,
+            id: api_response.id.unwrap_or_default(),
             content,
             stop_reason: choice.finish_reason,
             usage,
@@ -1026,5 +1044,51 @@ mod tests {
             }
             other => panic!("expected Provider error, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn response_with_missing_id_field() {
+        // Some providers (e.g., Ollama) may omit the `id` field
+        let json = r#"{
+            "choices": [{
+                "message": {"role": "assistant", "content": "Hello!"},
+                "finish_reason": "stop"
+            }],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 3}
+        }"#;
+        let response: OpenAIResponse = serde_json::from_str(json).unwrap();
+        assert!(response.id.is_none());
+        assert_eq!(response.choices.len(), 1);
+        assert_eq!(
+            response.choices[0].message.content.as_deref(),
+            Some("Hello!")
+        );
+    }
+
+    #[test]
+    fn response_with_null_id_field() {
+        let json = r#"{
+            "id": null,
+            "choices": [{
+                "message": {"role": "assistant", "content": "Hi"},
+                "finish_reason": "stop"
+            }]
+        }"#;
+        let response: OpenAIResponse = serde_json::from_str(json).unwrap();
+        assert!(response.id.is_none());
+        assert!(response.usage.is_none());
+    }
+
+    #[test]
+    fn response_with_present_id_field() {
+        let json = r#"{
+            "id": "chatcmpl-123",
+            "choices": [{
+                "message": {"role": "assistant", "content": "Hello"},
+                "finish_reason": "stop"
+            }]
+        }"#;
+        let response: OpenAIResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.id.as_deref(), Some("chatcmpl-123"));
     }
 }
