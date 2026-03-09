@@ -10,14 +10,14 @@
   <a href="https://github.com/nagisanzenin/skyclaw/stargazers"><img src="https://img.shields.io/github/stars/nagisanzenin/skyclaw?style=flat&color=gold&logo=github" alt="GitHub Stars"></a>
   <a href="https://discord.gg/3ux2c5xz"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
-  <img src="https://img.shields.io/badge/version-1.6.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-1130-green.svg" alt="1130 tests">
+  <img src="https://img.shields.io/badge/version-1.7.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-1141-green.svg" alt="1141 tests">
   <img src="https://img.shields.io/badge/providers-7-red.svg" alt="7 providers">
 </p>
 
 # SkyClaw
 
-Hyper-performance Rust agent runtime with extreme resilience and continuous self-learning. Deploys once, stays up forever. Learns from every task, remembers across sessions, self-heals through failures. 46K lines, 1130 tests, zero warnings, zero panic paths.
+Hyper-performance Rust agent runtime with extreme resilience and continuous self-learning. Deploys once, stays up forever. Learns from every task, remembers across sessions, self-heals through failures. 46K lines, 1141 tests, zero warnings, zero panic paths.
 
 ## What It Does
 
@@ -59,11 +59,11 @@ ORDER ─→ THINK ─→ ACTION ─→ VERIFY ─┐
 
 | Metric | Value |
 |--------|-------|
-| **Lines of Rust** | 46,332 across 104 source files |
-| **Tests** | 1,130 passing, 0 failures |
+| **Lines of Rust** | 46,827 across 104 source files |
+| **Tests** | 1,141 passing, 0 failures |
 | **Clippy warnings** | 0 (CI gate: `-D warnings`) |
 | **Workspace crates** | 13 + 1 binary |
-| **Implemented features** | 49 across 9 phases |
+| **Implemented features** | 52 across 10 phases |
 | **AGENTIC CORE modules** | 20 |
 | **Traits (core)** | 14 shared trait definitions |
 | **AI providers** | 7 (Anthropic, OpenAI, Gemini, Grok, OpenRouter, Z.ai, MiniMax) |
@@ -74,7 +74,7 @@ ORDER ─→ THINK ─→ ACTION ─→ VERIFY ─┐
 | **File storage** | 2 (local, S3/R2) |
 | **Observability** | OpenTelemetry, 6 predefined metrics |
 | **Security features** | Auto-whitelist, vault encryption, path traversal protection, force-push block, credential message deletion, 4-layer key validation, OTK secure key setup, secret output filter, UTF-8 safe string handling |
-| **Vision support** | JPEG, PNG, GIF, WebP (Anthropic + OpenAI formats) |
+| **Vision support** | JPEG, PNG, GIF, WebP (Anthropic + OpenAI formats) — graceful fallback on text-only models |
 | **Release profile** | `opt-level=z`, LTO, 1 codegen unit, stripped, `panic=unwind` |
 | **Minimum Rust version** | 1.82 (Edition 2021) |
 | **Binary size** | 7.1 MB (release, stripped, LTO) |
@@ -175,6 +175,8 @@ SkyClaw can see and understand images. Send a photo through any channel — the 
 
 Supports Anthropic and OpenAI vision formats natively.
 
+**Graceful fallback**: If images are sent to a text-only model (e.g. GPT-3.5, MiniMax, GLM text models), SkyClaw strips the images automatically, notifies the user, and continues processing the text. No API errors — just a helpful message suggesting a vision-capable model.
+
 ## Architecture
 
 13-crate Cargo workspace:
@@ -214,6 +216,13 @@ Tell SkyClaw to change its own settings through natural language:
 - "Change model to claude-opus-4-6"
 - "Switch to GPT-5.2"
 
+Or use the `/model` command for mechanical model switching:
+
+- `/model` — show current model + all available models with `[vision]` tags
+- `/model gpt-5.2` — switch instantly (validates model name, takes effect immediately)
+
+The `/model` command is an escape hatch — it works even when the current model is too weak to follow self-configuration instructions. Proxy providers (OpenRouter, custom base_url) accept any model name.
+
 Config lives at `~/.skyclaw/credentials.toml` — SkyClaw reads and edits this file itself.
 
 ## CLI Reference
@@ -232,7 +241,7 @@ skyclaw version            Show version info
 ```bash
 cargo check --workspace                                    # Quick compilation check
 cargo build --workspace                                    # Debug build
-cargo test --workspace                                     # Run all 1130 tests
+cargo test --workspace                                     # Run all 1141 tests
 cargo clippy --workspace --all-targets --all-features -- -D warnings  # Lint (0 warnings)
 cargo fmt --all                                            # Format
 cargo build --release                                      # Release build
@@ -247,6 +256,8 @@ cargo build --release                                      # Release build
 ## Release Timeline
 
 ```
+2026-03-10  v1.7.0  ●━━━ Vision fallback & /model command — graceful image stripping for text-only models, /model mechanical switching with instant reload, model validation, hot-reload auto-revert, proxy provider flexibility, 1141 tests
+                    │
 2026-03-10  v1.6.0  ●━━━ Extreme resilience — zero panic paths, 26-finding hardening audit (22 fixed), send retry (3 attempts), dead worker respawn with message re-dispatch, SQLite 5s timeout, full catch_unwind coverage, lock poison recovery across all crates, graceful SIGTERM drain, 1130 tests
                     │
 2026-03-10  v1.5.1  ●━━━ Crash resilience — 4-layer panic recovery, UTF-8 safety (6 fixes), conversation persistence, budget default fix, per-turn usage tracking

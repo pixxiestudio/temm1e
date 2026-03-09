@@ -22,9 +22,10 @@ use skyclaw_core::types::message::{
 use skyclaw_core::types::session::SessionContext;
 use skyclaw_core::MemoryEntryType;
 use skyclaw_core::{Memory, SearchOpts, Tool};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::learning;
+use crate::runtime::model_supports_vision;
 
 /// Minimum number of recent messages to always keep in context.
 const MIN_RECENT_MESSAGES: usize = 30;
@@ -341,6 +342,34 @@ pub async fn build_context(
         dropped = dropped_count,
         "Context budget allocation"
     );
+
+    // ── Vision safety: strip image parts for non-vision models ─────
+    // If the model doesn't support vision, remove all ImageUrl parts
+    // from every message (including old history) so the provider never
+    // receives unsupported content types.
+    if !model_supports_vision(model) {
+        let mut stripped = 0usize;
+        for msg in &mut messages {
+            if let MessageContent::Parts(parts) = &mut msg.content {
+                let before = parts.len();
+                parts.retain(|p| !matches!(p, ContentPart::Image { .. }));
+                stripped += before - parts.len();
+                // If only text parts remain, flatten to Text for cleanliness
+                if parts.len() == 1 {
+                    if let Some(ContentPart::Text { text }) = parts.first().cloned() {
+                        msg.content = MessageContent::Text(text);
+                    }
+                }
+            }
+        }
+        if stripped > 0 {
+            warn!(
+                model = model,
+                images_stripped = stripped,
+                "Stripped image parts from conversation history — model has no vision"
+            );
+        }
+    }
 
     CompletionRequest {
         model: model.to_string(),

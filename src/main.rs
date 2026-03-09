@@ -185,7 +185,7 @@ async fn validate_provider_key(
         Err(e) => {
             let err_str = format!("{}", e);
             let err_lower = err_str.to_lowercase();
-            // Auth errors mean the key is invalid — reject
+            // Auth errors or invalid model errors — reject the reload
             if err_lower.contains("401")
                 || err_lower.contains("403")
                 || err_lower.contains("unauthorized")
@@ -193,6 +193,9 @@ async fn validate_provider_key(
                 || err_lower.contains("invalid x-api-key")
                 || err_lower.contains("authentication")
                 || err_lower.contains("permission")
+                || err_lower.contains("404")
+                || err_lower.contains("not_found")
+                || err_lower.contains("model:")
             {
                 Err(err_str)
             } else {
@@ -672,6 +675,17 @@ fn build_system_prompt() -> String {
     prompt.push_str("- zai (zhipu): glm-4.7-flash, glm-4.7, glm-5, glm-5-code, glm-4.6v\n");
     prompt.push_str("- minimax: MiniMax-M2.5\n");
 
+    // ── Vision capability ──────────────────────────────────────
+    prompt.push_str(
+        "\nVISION (IMAGE) SUPPORT:\n\
+         Models that can see images: all claude-*, all gpt-4o/gpt-4.1/gpt-5.*, all gemini-*, \
+         grok-3/grok-4, glm-*v* (V-suffix only, e.g. glm-4.6v-flash).\n\
+         Text-only (NO vision): gpt-3.5-turbo, glm-4.7-flash, glm-4.7, glm-5, glm-5-code, \
+         glm-4.5-flash, all MiniMax models.\n\
+         If the user sends an image on a text-only model, images are auto-stripped and \
+         the user is notified. Suggest switching to a vision model.\n",
+    );
+
     // ── Current configuration ─────────────────────────────────
     if let Some(creds) = load_credentials_file() {
         prompt.push_str("\nCURRENT CONFIGURATION:\n");
@@ -781,6 +795,179 @@ fn list_configured_providers() -> String {
         }
         None => "No providers configured. Use /addkey to add one.".to_string(),
     }
+}
+
+/// Handle the /model command.
+///
+/// - `/model` (no args) → show current model + all available models per provider
+/// - `/model <exact-name>` → switch to that model on the active provider
+fn handle_model_command(args: &str) -> String {
+    let creds = match load_credentials_file() {
+        Some(c) => c,
+        None => return "No providers configured. Use /addkey to add one.".to_string(),
+    };
+
+    if creds.providers.is_empty() {
+        return "No providers configured. Use /addkey to add one.".to_string();
+    }
+
+    // ── No args: show current + available models ──────────────
+    if args.is_empty() {
+        let mut lines = Vec::new();
+
+        // Current model
+        if let Some(active) = creds.providers.iter().find(|p| p.name == creds.active) {
+            lines.push(format!(
+                "Current: {} on {} provider",
+                active.model, active.name
+            ));
+        }
+
+        lines.push(String::new());
+        lines.push("Available models per provider:".to_string());
+        for p in &creds.providers {
+            let models = available_models_for_provider(&p.name);
+            let active_marker = if p.name == creds.active {
+                " (active)"
+            } else {
+                ""
+            };
+            let is_proxy = p.base_url.is_some() || p.name == "openrouter";
+            lines.push(format!("  {}{}:", p.name, active_marker));
+            if is_proxy {
+                let current_vision = if is_vision_model(&p.model) {
+                    " [vision]"
+                } else {
+                    ""
+                };
+                lines.push(format!("    {} ← current{}", p.model, current_vision));
+                lines.push("    (proxy — any model name accepted)".to_string());
+            } else {
+                for m in &models {
+                    let vision = if is_vision_model(m) { " [vision]" } else { "" };
+                    let current = if *m == p.model { " ← current" } else { "" };
+                    lines.push(format!("    {}{}{}", m, vision, current));
+                }
+            }
+        }
+
+        lines.push(String::new());
+        lines.push("Switch model: /model <exact-model-name>".to_string());
+        lines.push("Example: /model claude-sonnet-4-6".to_string());
+        return lines.join("\n");
+    }
+
+    // ── Switch to specific model ──────────────────────────────
+    let target = args.trim();
+
+    // Find active provider
+    let active_provider = match creds.providers.iter().find(|p| p.name == creds.active) {
+        Some(p) => p.clone(),
+        None => return "Active provider not found in credentials.".to_string(),
+    };
+
+    if active_provider.model == target {
+        return format!("Already using {}.", target);
+    }
+
+    // Validate model against known list for the active provider.
+    // Skip validation for proxy/OpenRouter providers (custom base_url) — they accept any model.
+    let is_proxy = active_provider.base_url.is_some() || active_provider.name == "openrouter";
+    let known = available_models_for_provider(&active_provider.name);
+    if !is_proxy && !known.is_empty() && !known.contains(&target) {
+        let list = known
+            .iter()
+            .map(|m| {
+                let v = if is_vision_model(m) { " [vision]" } else { "" };
+                format!("  {}{}", m, v)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        return format!(
+            "Unknown model '{}' for provider '{}'.\n\nAvailable models:\n{}\n\nUse exact name: /model <model-name>",
+            target, active_provider.name, list
+        );
+    }
+
+    // Update the model in credentials.toml
+    let mut updated = creds.clone();
+    for p in &mut updated.providers {
+        if p.name == creds.active {
+            p.model = target.to_string();
+        }
+    }
+
+    let path = credentials_path();
+    match toml::to_string_pretty(&updated) {
+        Ok(content) => {
+            if let Err(e) = std::fs::write(&path, &content) {
+                return format!("Failed to write credentials: {}", e);
+            }
+            tracing::info!(
+                old_model = %active_provider.model,
+                new_model = %target,
+                "Model switched via /model command"
+            );
+            format!(
+                "Model switched: {} → {}\nHot-reload will apply after this response.",
+                active_provider.model, target
+            )
+        }
+        Err(e) => format!("Failed to serialize credentials: {}", e),
+    }
+}
+
+/// Known models for each provider (used by /model listing).
+fn available_models_for_provider(provider: &str) -> Vec<&'static str> {
+    match provider {
+        "anthropic" => vec!["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5"],
+        "openai" => vec![
+            "gpt-5.2",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o",
+            "o4-mini",
+            "o3-mini",
+            "gpt-3.5-turbo",
+        ],
+        "gemini" => vec![
+            "gemini-3-flash-preview",
+            "gemini-3.1-pro-preview",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+        ],
+        "grok" | "xai" => vec!["grok-4-1-fast-non-reasoning", "grok-3"],
+        "openrouter" => vec![
+            "anthropic/claude-sonnet-4-6",
+            "openai/gpt-5.2",
+            "google/gemini-3-flash-preview",
+        ],
+        "zai" | "zhipu" => vec![
+            "glm-4.7-flash",
+            "glm-4.7",
+            "glm-5",
+            "glm-5-code",
+            "glm-4.6v",
+            "glm-4.6v-flash",
+        ],
+        "minimax" => vec!["MiniMax-M2.5", "MiniMax-M2.5-highspeed"],
+        _ => vec![],
+    }
+}
+
+/// Quick vision check for /model display (mirrors runtime::model_supports_vision).
+fn is_vision_model(model: &str) -> bool {
+    let m = model.to_lowercase();
+    if m.starts_with("glm-") {
+        return m.contains('v') && !m.starts_with("glm-5");
+    }
+    if m.starts_with("minimax") {
+        return false;
+    }
+    if m.starts_with("gpt-3") {
+        return false;
+    }
+    true
 }
 
 /// Remove a provider from credentials.
@@ -1523,6 +1710,95 @@ async fn main() -> Result<()> {
                                         return;
                                     }
 
+                                    // /model [model-name] — list or switch models
+                                    if cmd_lower == "/model" || cmd_lower.starts_with("/model ") {
+                                        let args = if cmd_lower == "/model" {
+                                            ""
+                                        } else {
+                                            msg_text_cmd.trim()["/model".len()..].trim()
+                                        };
+                                        let result = handle_model_command(args);
+                                        let is_switch = result.starts_with("Model switched:");
+
+                                        // If model was switched, reload agent immediately
+                                        // (don't wait for file watcher)
+                                        let final_text = if is_switch {
+                                            if let Some(creds) = load_credentials_file() {
+                                                if let Some(prov) = creds.providers.iter().find(|p| p.name == creds.active) {
+                                                    let valid_keys: Vec<String> = prov.keys.iter()
+                                                        .filter(|k| !is_placeholder_key(k))
+                                                        .cloned()
+                                                        .collect();
+                                                    let effective_base_url = prov.base_url.clone().or_else(|| base_url.clone());
+                                                    let reload_config = skyclaw_core::types::config::ProviderConfig {
+                                                        name: Some(creds.active.clone()),
+                                                        api_key: valid_keys.first().cloned(),
+                                                        keys: valid_keys,
+                                                        model: Some(prov.model.clone()),
+                                                        base_url: effective_base_url,
+                                                        extra_headers: std::collections::HashMap::new(),
+                                                    };
+                                                    match validate_provider_key(&reload_config).await {
+                                                        Ok(validated_provider) => {
+                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                                validated_provider,
+                                                                memory.clone(),
+                                                                tools_template.clone(),
+                                                                prov.model.clone(),
+                                                                Some(build_system_prompt()),
+                                                                max_turns,
+                                                                max_ctx,
+                                                                max_rounds,
+                                                                max_task_duration,
+                                                                max_spend,
+                                                            ));
+                                                            *agent_state.write().await = Some(new_agent);
+                                                            tracing::info!(
+                                                                provider = %creds.active,
+                                                                model = %prov.model,
+                                                                "Agent reloaded via /model command"
+                                                            );
+                                                            format!("{}\nActive now.", result)
+                                                        }
+                                                        Err(err) => {
+                                                            tracing::warn!(error = %err, "Model switch failed validation");
+                                                            // Revert credentials
+                                                            if let Some(old_agent) = agent_state.read().await.as_ref() {
+                                                                let old_model = old_agent.model().to_string();
+                                                                let mut rev = creds.clone();
+                                                                for p in &mut rev.providers {
+                                                                    if p.name == creds.active {
+                                                                        p.model = old_model.clone();
+                                                                    }
+                                                                }
+                                                                if let Ok(content) = toml::to_string_pretty(&rev) {
+                                                                    let _ = std::fs::write(credentials_path(), &content);
+                                                                }
+                                                            }
+                                                            format!("Model switch failed: {}\nReverted to previous model.", err)
+                                                        }
+                                                    }
+                                                } else {
+                                                    result
+                                                }
+                                            } else {
+                                                result
+                                            }
+                                        } else {
+                                            result
+                                        };
+
+                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                            chat_id: msg.chat_id.clone(),
+                                            text: final_text,
+                                            reply_to: Some(msg.id.clone()),
+                                            parse_mode: None,
+                                        };
+                                        send_with_retry(&*sender, reply).await;
+                                        is_heartbeat_clone.store(false, Ordering::Relaxed);
+                                        return;
+                                    }
+
                                     // /removekey <provider>
                                     if cmd_lower.starts_with("/removekey") {
                                         let provider_arg = msg_text_cmd.trim()["/removekey".len()..].trim();
@@ -1985,8 +2261,23 @@ async fn main() -> Result<()> {
                                                             tracing::warn!(
                                                                 provider = %new_name,
                                                                 error = %err,
-                                                                "Hot-reload aborted — new key failed validation, keeping current agent"
+                                                                "Hot-reload aborted — validation failed, reverting model"
                                                             );
+                                                            // Revert credentials.toml to the working model
+                                                            if let Some(mut creds) = load_credentials_file() {
+                                                                for p in &mut creds.providers {
+                                                                    if p.name == new_name {
+                                                                        p.model = current_model.clone();
+                                                                    }
+                                                                }
+                                                                if let Ok(content) = toml::to_string_pretty(&creds) {
+                                                                    let _ = std::fs::write(credentials_path(), &content);
+                                                                    tracing::info!(
+                                                                        model = %current_model,
+                                                                        "Reverted credentials.toml to working model"
+                                                                    );
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -2828,14 +3119,19 @@ mod tests {
 
     #[test]
     fn explicit_zai_key() {
-        let result = detect_api_key("zai:24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1").unwrap();
+        let result =
+            detect_api_key("zai:24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1").unwrap();
         assert_eq!(result.provider, "zai");
-        assert_eq!(result.api_key, "24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1");
+        assert_eq!(
+            result.api_key,
+            "24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1"
+        );
     }
 
     #[test]
     fn explicit_zhipu_key() {
-        let result = detect_api_key("zhipu:24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1").unwrap();
+        let result =
+            detect_api_key("zhipu:24f7a8ebaa2f4cb1866b82b0670a5e6c.rPGt3alOjwddy4l1").unwrap();
         assert_eq!(result.provider, "zai");
     }
 
