@@ -82,22 +82,43 @@ impl CodexResponsesProvider {
 
         // Note: Codex backend does not support max_output_tokens or temperature
 
-        // Convert tools
+        // Convert tools — Codex backend requires strict: true on function tools
         if !request.tools.is_empty() {
             let tools: Vec<serde_json::Value> = request
                 .tools
                 .iter()
                 .map(|t| {
+                    // Ensure parameters conform to strict mode:
+                    // - must have "additionalProperties": false
+                    // - all properties must be in "required"
+                    let mut params = t.parameters.clone();
+                    if let Some(obj) = params.as_object_mut() {
+                        obj.entry("additionalProperties".to_string())
+                            .or_insert(serde_json::Value::Bool(false));
+                        // If properties exist but required is missing, add all properties as required
+                        if obj.contains_key("properties") && !obj.contains_key("required") {
+                            if let Some(props) = obj.get("properties").and_then(|p| p.as_object()) {
+                                let required: Vec<serde_json::Value> = props
+                                    .keys()
+                                    .map(|k| serde_json::Value::String(k.clone()))
+                                    .collect();
+                                obj.insert("required".to_string(), serde_json::Value::Array(required));
+                            }
+                        }
+                    }
                     serde_json::json!({
                         "type": "function",
                         "name": t.name,
                         "description": t.description,
-                        "parameters": t.parameters,
+                        "strict": false,
+                        "parameters": params,
                     })
                 })
                 .collect();
             body["tools"] = serde_json::Value::Array(tools);
         }
+
+        tracing::debug!(body = %serde_json::to_string_pretty(&body).unwrap_or_default(), "Codex Responses API request body");
 
         Ok(body)
     }
@@ -268,7 +289,10 @@ impl Provider for CodexResponsesProvider {
 
         // State for the streaming parser:
         // (byte_stream, buffer, accumulated_tool_calls)
-        type ToolCallAcc = (String, String, String); // (call_id, name, arguments)
+        // ToolCallAcc: (item_id, call_id, name, arguments)
+        // item_id is used as the lookup key (matches delta events' item_id)
+        // call_id is the actual ID used in the ToolUse output
+        type ToolCallAcc = (String, String, String, String);
         let stream = futures::stream::unfold(
             (
                 Box::pin(byte_stream),
@@ -294,8 +318,11 @@ impl Provider for CodexResponsesProvider {
                         }
 
                         if data_line.is_empty() || data_line == "[DONE]" {
-                            // Flush accumulated tool calls one at a time
-                            if let Some((call_id, name, args)) = tool_calls.pop() {
+                            // Flush accumulated tool calls one at a time (skip entries with empty names)
+                            while let Some((_item_id, call_id, name, args)) = tool_calls.pop() {
+                                if name.is_empty() {
+                                    continue; // Skip orphaned delta accumulations
+                                }
                                 let input: serde_json::Value = serde_json::from_str(&args)
                                     .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
                                 return Some((
@@ -328,8 +355,16 @@ impl Provider for CodexResponsesProvider {
                         let parsed: Result<serde_json::Value, _> = serde_json::from_str(&data_line);
                         let data = match parsed {
                             Ok(d) => d,
-                            Err(_) => continue,
+                            Err(e) => {
+                                tracing::warn!(error = %e, data = %data_line, "Failed to parse SSE data");
+                                continue;
+                            }
                         };
+
+                        // Log all event types for debugging tool calls
+                        if event_type != "response.output_text.delta" {
+                            tracing::debug!(event = %event_type, data = %data_line, "Codex SSE event");
+                        }
 
                         match event_type.as_str() {
                             "response.output_text.delta" => {
@@ -344,27 +379,55 @@ impl Provider for CodexResponsesProvider {
                                     ));
                                 }
                             }
+                            "response.output_item.added" => {
+                                // A new output item is being created — capture name for function_call
+                                if let Some(item) = data.get("item") {
+                                    if item.get("type").and_then(|t| t.as_str())
+                                        == Some("function_call")
+                                    {
+                                        // item.id = item_id used by delta events
+                                        let item_id = item
+                                            .get("id")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        // item.call_id = the actual call ID for the ToolUse
+                                        let call_id = item
+                                            .get("call_id")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        let name = item
+                                            .get("name")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        if !item_id.is_empty() {
+                                            tracing::info!(item_id = %item_id, call_id = %call_id, name = %name, "Function call started");
+                                            tool_calls.push((item_id, call_id, name, String::new()));
+                                        }
+                                    }
+                                }
+                            }
                             "response.function_call_arguments.delta" => {
-                                let call_id = data
-                                    .get("call_id")
-                                    .or_else(|| data.get("item_id"))
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("")
-                                    .to_string();
-                                let name = data
-                                    .get("name")
+                                // Delta events use item_id to reference the function call
+                                let item_id = data
+                                    .get("item_id")
                                     .and_then(|v| v.as_str())
                                     .unwrap_or("")
                                     .to_string();
                                 let delta =
                                     data.get("delta").and_then(|v| v.as_str()).unwrap_or("");
 
+                                // Match by item_id (field 0 of the accumulator)
                                 if let Some(existing) =
-                                    tool_calls.iter_mut().find(|tc| tc.0 == call_id)
+                                    tool_calls.iter_mut().find(|tc| tc.0 == item_id)
                                 {
-                                    existing.2.push_str(delta);
-                                } else if !call_id.is_empty() {
-                                    tool_calls.push((call_id, name, delta.to_string()));
+                                    existing.3.push_str(delta);
+                                } else if !item_id.is_empty() {
+                                    // Orphaned delta — no matching added event. Store anyway
+                                    // with item_id as both keys, name will be filled by done event
+                                    tool_calls.push((item_id.clone(), item_id, String::new(), delta.to_string()));
                                 }
                             }
                             "response.output_item.done" => {
@@ -373,6 +436,12 @@ impl Provider for CodexResponsesProvider {
                                     if item.get("type").and_then(|t| t.as_str())
                                         == Some("function_call")
                                     {
+                                        // item.id matches item_id in delta events
+                                        let item_id = item
+                                            .get("id")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
                                         let call_id = item
                                             .get("call_id")
                                             .and_then(|v| v.as_str())
@@ -389,8 +458,8 @@ impl Provider for CodexResponsesProvider {
                                             .unwrap_or("{}")
                                             .to_string();
 
-                                        // Remove from accumulator if present
-                                        tool_calls.retain(|tc| tc.0 != call_id);
+                                        // Remove from accumulator by item_id (field 0)
+                                        tool_calls.retain(|tc| tc.0 != item_id);
 
                                         let input: serde_json::Value = serde_json::from_str(&args)
                                             .unwrap_or(serde_json::Value::Object(
@@ -412,8 +481,11 @@ impl Provider for CodexResponsesProvider {
                                 }
                             }
                             "response.completed" => {
-                                // Final event — flush remaining tool calls one at a time
-                                if let Some((call_id, name, args)) = tool_calls.pop() {
+                                // Final event — flush remaining tool calls (skip empty names)
+                                while let Some((_item_id, call_id, name, args)) = tool_calls.pop() {
+                                    if name.is_empty() {
+                                        continue; // Skip orphaned delta accumulations
+                                    }
                                     let input: serde_json::Value = serde_json::from_str(&args)
                                         .unwrap_or(serde_json::Value::Object(
                                             serde_json::Map::new(),
@@ -472,8 +544,11 @@ impl Provider for CodexResponsesProvider {
                             ));
                         }
                         None => {
-                            // Stream ended — flush remaining tool calls one at a time
-                            if let Some((call_id, name, args)) = tool_calls.pop() {
+                            // Stream ended — flush remaining tool calls (skip empty names)
+                            while let Some((_item_id, call_id, name, args)) = tool_calls.pop() {
+                                if name.is_empty() {
+                                    continue; // Skip orphaned delta accumulations
+                                }
                                 let input: serde_json::Value = serde_json::from_str(&args)
                                     .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
                                 return Some((
@@ -626,6 +701,11 @@ mod tests {
         assert_eq!(tools.len(), 1);
         assert_eq!(tools[0]["type"], "function");
         assert_eq!(tools[0]["name"], "shell");
+        assert_eq!(tools[0]["strict"], false);
+        assert_eq!(tools[0]["parameters"]["additionalProperties"], false);
+        // Auto-generated required array from properties
+        let required = tools[0]["parameters"]["required"].as_array().unwrap();
+        assert!(required.contains(&serde_json::json!("command")));
     }
 
     #[test]
