@@ -10,7 +10,7 @@
   <a href="https://github.com/nagisanzenin/skyclaw/stargazers"><img src="https://img.shields.io/github/stars/nagisanzenin/skyclaw?style=flat&color=gold&logo=github" alt="GitHub Stars"></a>
   <a href="https://discord.gg/3ux2c5xz"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
-  <img src="https://img.shields.io/badge/version-2.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.3.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-1297-green.svg" alt="1297 tests">
   <img src="https://img.shields.io/badge/providers-8-red.svg" alt="8 providers">
 </p>
@@ -422,7 +422,7 @@ Checks for new commits, pulls the latest code, and rebuilds the release binary i
 ```bash
 $ skyclaw update
 SkyClaw Update
-Current version: 2.1.0
+Current version: 2.3.0
 
 Fetching latest changes...
 3 new commit(s):
