@@ -10,8 +10,8 @@
   <a href="https://github.com/nagisanzenin/skyclaw/stargazers"><img src="https://img.shields.io/github/stars/nagisanzenin/skyclaw?style=flat&color=gold&logo=github" alt="GitHub Stars"></a>
   <a href="https://discord.gg/3ux2c5xz"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
-  <img src="https://img.shields.io/badge/version-2.4.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-1334-green.svg" alt="1334 tests">
+  <img src="https://img.shields.io/badge/version-2.4.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-1343-green.svg" alt="1343 tests">
   <img src="https://img.shields.io/badge/providers-8-red.svg" alt="8 providers">
 </p>
 
@@ -515,6 +515,8 @@ cargo build --release                                      # Release build
 ## Release Timeline
 
 ```
+2026-03-11  v2.4.1  ●━━━ Codex OAuth polish — OAuth auto-detect at startup (no config change needed), /model + /keys Codex-aware, live model switching for Codex OAuth (agent hot-rebuild), callback port race condition fix, LLM classifier stop category, Codex Responses API probe validation, 1343 tests
+                    │
 2026-03-11  v2.4.0  ●━━━ Interceptor Phase 1 — real-time task status observation via watch channel (AgentTaskStatus + AgentTaskPhase), CancellationToken infrastructure alongside AtomicBool interrupt, 10 status emission checkpoints in agent loop, prompted tool calling fallback for models without native function calling (#8), user-friendly error messages (no more raw JSON dumps), gpt-4o/gpt-3.5-turbo model registry entries, zero behavioral change (all Option — None = zero overhead), 1334 tests
                     │
 2026-03-11  v2.3.1  ●━━━ Model registry — per-model context window and output token limits for 50+ models, 10% input budget safety margin for token estimation errors, auto-cap for small models (#6), 1307 tests
