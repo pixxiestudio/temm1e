@@ -100,6 +100,12 @@ enum Commands {
     Version,
     /// Check for updates and install if available
     Update,
+    /// Factory reset — wipe all local state and start fresh
+    Reset {
+        /// Skip confirmation prompt (for scripted use)
+        #[arg(long)]
+        confirm: bool,
+    },
     /// Manage OpenAI Codex OAuth authentication
     #[cfg(feature = "codex-oauth")]
     Auth {
@@ -1530,6 +1536,109 @@ async fn main() -> Result<()> {
             "PANIC caught — task will attempt recovery"
         );
     }));
+
+    // ── Handle Reset before config loading ─────────────────
+    // Reset must work even when config is corrupted/poisoned,
+    // so we intercept it before load_config() which might fail.
+    if let Commands::Reset { confirm } = &cli.command {
+        let data_dir = dirs::home_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(".skyclaw");
+
+        if !data_dir.exists() {
+            println!("Nothing to reset — {} does not exist.", data_dir.display());
+            return Ok(());
+        }
+
+        // Check if daemon is running
+        if let Some(pid) = read_pid_file() {
+            if is_process_alive(pid) {
+                eprintln!(
+                    "SkyClaw daemon is running (PID {}). Stop it first with `skyclaw stop`.",
+                    pid
+                );
+                std::process::exit(1);
+            }
+        }
+
+        // Confirmation gate
+        if !confirm {
+            println!("This will DELETE all SkyClaw local state:");
+            println!("  {}/", data_dir.display());
+            println!();
+            println!("  - credentials.toml    (saved API keys)");
+            println!("  - memory.db           (conversation history)");
+            println!("  - allowlist.toml      (user access control)");
+            println!("  - mcp.toml            (MCP server configs)");
+            println!("  - config.toml         (local config overrides)");
+            println!("  - oauth.json          (Codex OAuth tokens)");
+            println!("  - custom-tools/       (user-authored tools)");
+            println!("  - workspace/          (workspace files)");
+            println!();
+            println!("A backup will be saved before deletion.");
+            println!();
+            print!("Type 'reset' to confirm: ");
+            use std::io::Write;
+            std::io::stdout().flush().ok();
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).ok();
+            if input.trim() != "reset" {
+                println!("Aborted.");
+                return Ok(());
+            }
+        }
+
+        // Backup before wipe
+        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let backup_dir = dirs::home_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(format!(".skyclaw.bak.{}", timestamp));
+
+        // Copy directory tree for backup
+        fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+            std::fs::create_dir_all(dst)?;
+            for entry in std::fs::read_dir(src)? {
+                let entry = entry?;
+                let src_path = entry.path();
+                let dst_path = dst.join(entry.file_name());
+                if src_path.is_dir() {
+                    copy_dir_recursive(&src_path, &dst_path)?;
+                } else {
+                    std::fs::copy(&src_path, &dst_path)?;
+                }
+            }
+            Ok(())
+        }
+
+        match copy_dir_recursive(&data_dir, &backup_dir) {
+            Ok(()) => {
+                println!("Backup saved to {}", backup_dir.display());
+            }
+            Err(e) => {
+                eprintln!("Failed to create backup: {}", e);
+                eprintln!("Aborting reset — your data is untouched.");
+                std::process::exit(1);
+            }
+        }
+
+        // Nuke everything
+        match std::fs::remove_dir_all(&data_dir) {
+            Ok(()) => {
+                // Re-create the empty directory so future commands don't fail
+                let _ = std::fs::create_dir_all(&data_dir);
+                println!("Factory reset complete.");
+                println!("Run `skyclaw start` for fresh onboarding.");
+            }
+            Err(e) => {
+                eprintln!("Failed to remove {}: {}", data_dir.display(), e);
+                eprintln!("Backup is at {}", backup_dir.display());
+                std::process::exit(1);
+            }
+        }
+
+        return Ok(());
+    }
 
     // Load configuration
     let config_path = cli.config.as_ref().map(std::path::Path::new);
@@ -4553,6 +4662,8 @@ Just type a message to chat with the AI agent.",
                 }
             },
         },
+        // Reset is handled before config loading — this arm is unreachable
+        Commands::Reset { .. } => unreachable!(),
     }
 
     Ok(())
