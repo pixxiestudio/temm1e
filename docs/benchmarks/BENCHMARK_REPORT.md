@@ -1,4 +1,4 @@
-# SkyClaw v2.1.0 Performance Benchmark Report
+# TEMM1E v2.1.0 Performance Benchmark Report
 
 **Date:** 2026-03-11
 **Platform:** macOS Darwin 23.6.0 (Apple Silicon, arm64)
@@ -10,13 +10,13 @@
 
 ## Executive Summary
 
-SkyClaw v2.1.0 uses **80x less memory** than OpenClaw at idle, starts **250x faster** at the gateway level, and ships as a **9.3 MB** single binary versus OpenClaw's ~800 MB (with node_modules). All measurements are from a live 3-turn conversation test with real API calls, MCP server connected, and SQLite memory backend active.
+TEMM1E v2.1.0 uses **80x less memory** than OpenClaw at idle, starts **250x faster** at the gateway level, and ships as a **9.3 MB** single binary versus OpenClaw's ~800 MB (with node_modules). All measurements are from a live 3-turn conversation test with real API calls, MCP server connected, and SQLite memory backend active.
 
 ---
 
 ## Binary & Build Metrics
 
-| Metric | SkyClaw v2.1.0 | OpenClaw (Node.js) | ZeroClaw (Rust) |
+| Metric | TEMM1E v2.1.0 | OpenClaw (Node.js) | ZeroClaw (Rust) |
 |--------|---------------|-------------------|-----------------|
 | Binary size | **9.3 MB** | ~800 MB (w/ node_modules) | ~12 MB |
 | Language | Rust 2021 | TypeScript/Node.js | Rust |
@@ -43,13 +43,13 @@ Measured over 5 consecutive cold starts (CLI `--help` invocation):
 
 **Gateway startup** (including SQLite init, MCP server connection, tool registration):
 - Time to health endpoint ready: **~1.4 s** (network-bound — MCP Playwright server init takes ~1.4s)
-- SkyClaw-only init (SQLite + tools + config): **~4 ms** (visible in logs)
+- TEMM1E-only init (SQLite + tools + config): **~4 ms** (visible in logs)
 
 ### Comparison
 
 | Runtime | Cold Start | Gateway Ready |
 |---------|-----------|---------------|
-| **SkyClaw** | **31 ms** | **1.4 s** (MCP-bound) |
+| **TEMM1E** | **31 ms** | **1.4 s** (MCP-bound) |
 | OpenClaw | ~8,000 ms | ~10,000 ms |
 | ZeroClaw | <10 ms | <100 ms |
 
@@ -95,7 +95,7 @@ Post-session    |  9.8     | cleanup  | MCP detached, GC-equivalent drop
 
 | Runtime | Idle RAM | Peak (3-turn chat) |
 |---------|----------|-------------------|
-| **SkyClaw** | **15 MB** | **17 MB** |
+| **TEMM1E** | **15 MB** | **17 MB** |
 | OpenClaw | ~1,200 MB | ~1,500 MB+ |
 | ZeroClaw | ~4 MB | ~8 MB |
 
@@ -161,8 +161,8 @@ Post-session    |  9.8     | cleanup  | MCP detached, GC-equivalent drop
 ### Measurement Tools
 - Startup time: Python `time.time()` wrapper, 5 consecutive runs
 - Memory: `ps -o rss=` sampled every 2 seconds via background monitor script
-- API metrics: SkyClaw's built-in `BudgetTracker` (logged per-call)
-- Conversation: Automated 3-turn script piped via stdin to `skyclaw chat`
+- API metrics: TEMM1E's built-in `BudgetTracker` (logged per-call)
+- Conversation: Automated 3-turn script piped via stdin to `temm1e chat`
 
 ### OpenClaw Reference Data
 - Source: Public benchmarks, documentation, and community reports
@@ -188,9 +188,9 @@ Post-session    |  9.8     | cleanup  | MCP detached, GC-equivalent drop
 
 ## Key Takeaways
 
-1. **SkyClaw runs on hardware where OpenClaw cannot.** A 512 MB VPS can comfortably run SkyClaw with room to spare. OpenClaw requires at minimum 1.5 GB.
+1. **TEMM1E runs on hardware where OpenClaw cannot.** A 512 MB VPS can comfortably run TEMM1E with room to spare. OpenClaw requires at minimum 1.5 GB.
 
-2. **Startup is effectively instant.** The 31ms cold start means SkyClaw can be used as a CLI tool invoked per-command, not just a long-running daemon. OpenClaw's 8-second startup forces daemon-only usage.
+2. **Startup is effectively instant.** The 31ms cold start means TEMM1E can be used as a CLI tool invoked per-command, not just a long-running daemon. OpenClaw's 8-second startup forces daemon-only usage.
 
 3. **Memory is flat under load.** The 15→17 MB range during active conversation shows Rust's zero-GC architecture. No memory spikes, no GC pauses, deterministic allocation.
 

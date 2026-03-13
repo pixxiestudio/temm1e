@@ -105,14 +105,14 @@ If the author incorrectly marks dependent phases as parallel:
 
 ## 5. Implementation Plan
 
-### Step 1: Config flag (skyclaw-core)
+### Step 1: Config flag (temm1e-core)
 
 Add `parallel_phases: bool` to `AgentConfig` with `default = false`.
 
-**Files:** `crates/skyclaw-core/src/types/config.rs`
+**Files:** `crates/temm1e-core/src/types/config.rs`
 **Risk:** Zero — additive field with serde default
 
-### Step 2: Phase parser (skyclaw-agent/blueprint.rs)
+### Step 2: Phase parser (temm1e-agent/blueprint.rs)
 
 Add `parse_blueprint_phases(body: &str) -> Vec<BlueprintPhase>` function.
 
@@ -129,21 +129,21 @@ Add `parse_blueprint_phases(body: &str) -> Vec<BlueprintPhase>` function.
    - If `(independent)` → no deps
    - If no annotation → depends on previous phase (linear chain)
 
-**Files:** `crates/skyclaw-agent/src/blueprint.rs`
+**Files:** `crates/temm1e-agent/src/blueprint.rs`
 **Risk:** Zero — pure function, no side effects, doesn't change existing code
 
-### Step 3: Phase-to-TaskGraph bridge (skyclaw-agent/blueprint.rs)
+### Step 3: Phase-to-TaskGraph bridge (temm1e-agent/blueprint.rs)
 
-Add `phases_to_task_graph(phases: Vec<BlueprintPhase>, goal: &str) -> Result<TaskGraph, SkyclawError>`.
+Add `phases_to_task_graph(phases: Vec<BlueprintPhase>, goal: &str) -> Result<TaskGraph, Temm1eError>`.
 
 **Algorithm:**
 - Convert each `BlueprintPhase` to `SubTask` (id, description=steps, dependencies)
 - Call `TaskGraph::new(goal, subtasks)` — existing constructor handles validation + cycle detection
 
-**Files:** `crates/skyclaw-agent/src/blueprint.rs`
+**Files:** `crates/temm1e-agent/src/blueprint.rs`
 **Risk:** Zero — reuses existing validated TaskGraph constructor
 
-### Step 4: Phase executor (skyclaw-agent/runtime.rs)
+### Step 4: Phase executor (temm1e-agent/runtime.rs)
 
 Add phase execution loop inside `process_message()`, gated by `self.parallel_phases`:
 
@@ -176,10 +176,10 @@ an LLM call). Configurable later if needed.
 - All phases complete → success
 - Any phase fails → report partial results + which phases failed
 
-**Files:** `crates/skyclaw-agent/src/runtime.rs`
+**Files:** `crates/temm1e-agent/src/runtime.rs`
 **Risk:** Low — gated behind opt-in flag, falls through to existing code when off
 
-### Step 5: Authoring prompt update (skyclaw-agent/blueprint.rs)
+### Step 5: Authoring prompt update (temm1e-agent/blueprint.rs)
 
 Update `build_authoring_prompt()` to include parallel annotation instructions:
 
@@ -192,17 +192,17 @@ If a phase is genuinely independent of the previous phase, annotate it:]
 ### Phase N: [Name] (independent)
 ```
 
-**Files:** `crates/skyclaw-agent/src/blueprint.rs`
+**Files:** `crates/temm1e-agent/src/blueprint.rs`
 **Risk:** Zero — only affects new blueprint authoring, doesn't change existing blueprints
 
-### Step 6: Wire flag through runtime (skyclaw-agent + main.rs)
+### Step 6: Wire flag through runtime (temm1e-agent + main.rs)
 
 Pass `parallel_phases` from config → AgentRuntime → process_message gate.
 
 **Pattern:** Same as `v2_optimizations` — field on AgentRuntime, builder method,
 checked at runtime.
 
-**Files:** `crates/skyclaw-agent/src/runtime.rs`, `src/main.rs`
+**Files:** `crates/temm1e-agent/src/runtime.rs`, `src/main.rs`
 **Risk:** Zero — follows existing pattern exactly
 
 ### Step 7: Tests
@@ -215,7 +215,7 @@ Unit tests in `runtime.rs` or integration test:
 - Phase execution with `parallel_phases = false` → existing behavior
 - Phase execution with `parallel_phases = true` → phases execute via TaskGraph
 
-**Files:** `crates/skyclaw-agent/src/blueprint.rs`, test modules
+**Files:** `crates/temm1e-agent/src/blueprint.rs`, test modules
 **Risk:** Zero — tests only
 
 ## 6. Risk Matrix
@@ -238,9 +238,9 @@ When the flag is off, zero new code paths are reached.
 
 | File | Change | Lines (est.) |
 |------|--------|-------------|
-| `crates/skyclaw-core/src/types/config.rs` | Add `parallel_phases` field | +5 |
-| `crates/skyclaw-agent/src/blueprint.rs` | Add phase parser + bridge | +150 |
-| `crates/skyclaw-agent/src/runtime.rs` | Add phase executor + flag | +120 |
+| `crates/temm1e-core/src/types/config.rs` | Add `parallel_phases` field | +5 |
+| `crates/temm1e-agent/src/blueprint.rs` | Add phase parser + bridge | +150 |
+| `crates/temm1e-agent/src/runtime.rs` | Add phase executor + flag | +120 |
 | `src/main.rs` | Pass flag to AgentRuntime | +3 |
 | Tests | Phase parser + bridge + executor | +200 |
 | **Total** | | **~480** |

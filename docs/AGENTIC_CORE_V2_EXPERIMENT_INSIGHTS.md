@@ -89,10 +89,10 @@ Trivial/Simple tiers show ~0% savings because smart LLMs (GPT-5.2) already don't
 
 ### Session history pollution — critical
 
-- `~/.skyclaw/memory.db` retains conversation history across benchmark runs
+- `~/.temm1e/memory.db` retains conversation history across benchmark runs
 - First benchmark was polluted: 76 restored Gemini messages inflated base context from ~3,100 to ~9,000 tokens
 - Broke Simple tier classification (history depth penalty in classifier)
-- **Rule**: ALWAYS clean both `~/.skyclaw/memory.db` AND per-version `memory.db` before any benchmark
+- **Rule**: ALWAYS clean both `~/.temm1e/memory.db` AND per-version `memory.db` before any benchmark
 
 ### Gemini incompatibility with tool benchmarks
 
@@ -125,5 +125,5 @@ Trivial/Simple tiers show ~0% savings because smart LLMs (GPT-5.2) already don't
 
 ---
 
-*Insights from SkyClaw Agentic Core v2.0 A/B benchmark experiment*
+*Insights from TEMM1E Agentic Core v2.0 A/B benchmark experiment*
 *Date: 2026-03-10*

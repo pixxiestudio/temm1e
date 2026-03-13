@@ -1,6 +1,6 @@
-# SkyClaw Agentic Core Architecture
+# TEMM1E Agentic Core Architecture
 
-> The cognitive engine behind SkyClaw's autonomous execution.
+> The cognitive engine behind TEMM1E's autonomous execution.
 
 ---
 
@@ -33,7 +33,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           skyclaw-agent crate                                   │
+│                           temm1e-agent crate                                   │
 │                                                                                 │
 │  ┌─────────────────────────────────────────────────────────────────────────┐    │
 │  │                         RUNTIME (runtime.rs)                            │    │
@@ -464,7 +464,7 @@ User sends "Deploy the app, run migrations, and verify health"
                                │
                      ┌─────────▼──────────┐
                      │   AGENT RUNTIME    │
-                     │   (skyclaw-agent)  │
+                     │   (temm1e-agent)  │
                      └─────────┬──────────┘
                                │
         ┌──────────────────────┼─────────────────────────┐

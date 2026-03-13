@@ -1,28 +1,28 @@
-{"timestamp":"2026-03-13T12:52:20.220672Z","level":"INFO","fields":{"message":"SkyClaw starting","mode":"auto"},"target":"skyclaw"}
-SkyClaw interactive chat
+{"timestamp":"2026-03-13T12:52:20.220672Z","level":"INFO","fields":{"message":"TEMM1E starting","mode":"auto"},"target":"temm1e"}
+TEMM1E interactive chat
 Type '/quit' or '/exit' to quit.
 
-{"timestamp":"2026-03-13T12:52:20.222167Z","level":"INFO","fields":{"message":"SQLite memory backend initialised"},"target":"skyclaw_memory::sqlite"}
-{"timestamp":"2026-03-13T12:52:20.222194Z","level":"INFO","fields":{"message":"CLI channel started"},"target":"skyclaw_channels::cli"}
-skyclaw> {"timestamp":"2026-03-13T12:52:20.223976Z","level":"INFO","fields":{"message":"SQLite usage store initialised"},"target":"skyclaw_memory::sqlite_usage"}
-{"timestamp":"2026-03-13T12:52:20.224020Z","level":"INFO","fields":{"message":"Tools registered","count":13},"target":"skyclaw_tools"}
-{"timestamp":"2026-03-13T12:52:20.225084Z","level":"INFO","fields":{"message":"Loaded MCP config from \"/Users/quanduong/.skyclaw/mcp.toml\"","servers":1},"target":"skyclaw_mcp::config"}
-{"timestamp":"2026-03-13T12:52:20.225134Z","level":"INFO","fields":{"message":"Loaded MCP config from \"/Users/quanduong/.skyclaw/mcp.toml\"","servers":1},"target":"skyclaw_mcp::config"}
-{"timestamp":"2026-03-13T12:52:21.485731Z","level":"INFO","fields":{"message":"MCP server initialized","server":"playwright","mcp_server_name":"Playwright","mcp_server_version":"0.0.68","protocol":"2025-11-25"},"target":"skyclaw_mcp::client"}
-{"timestamp":"2026-03-13T12:52:21.488313Z","level":"INFO","fields":{"message":"MCP server connected","server":"playwright","tools":22},"target":"skyclaw_mcp::manager"}
-{"timestamp":"2026-03-13T12:52:21.488388Z","level":"INFO","fields":{"message":"MCP bridge tools loaded","count":22},"target":"skyclaw"}
+{"timestamp":"2026-03-13T12:52:20.222167Z","level":"INFO","fields":{"message":"SQLite memory backend initialised"},"target":"temm1e_memory::sqlite"}
+{"timestamp":"2026-03-13T12:52:20.222194Z","level":"INFO","fields":{"message":"CLI channel started"},"target":"temm1e_channels::cli"}
+temm1e> {"timestamp":"2026-03-13T12:52:20.223976Z","level":"INFO","fields":{"message":"SQLite usage store initialised"},"target":"temm1e_memory::sqlite_usage"}
+{"timestamp":"2026-03-13T12:52:20.224020Z","level":"INFO","fields":{"message":"Tools registered","count":13},"target":"temm1e_tools"}
+{"timestamp":"2026-03-13T12:52:20.225084Z","level":"INFO","fields":{"message":"Loaded MCP config from \"/Users/quanduong/.temm1e/mcp.toml\"","servers":1},"target":"temm1e_mcp::config"}
+{"timestamp":"2026-03-13T12:52:20.225134Z","level":"INFO","fields":{"message":"Loaded MCP config from \"/Users/quanduong/.temm1e/mcp.toml\"","servers":1},"target":"temm1e_mcp::config"}
+{"timestamp":"2026-03-13T12:52:21.485731Z","level":"INFO","fields":{"message":"MCP server initialized","server":"playwright","mcp_server_name":"Playwright","mcp_server_version":"0.0.68","protocol":"2025-11-25"},"target":"temm1e_mcp::client"}
+{"timestamp":"2026-03-13T12:52:21.488313Z","level":"INFO","fields":{"message":"MCP server connected","server":"playwright","tools":22},"target":"temm1e_mcp::manager"}
+{"timestamp":"2026-03-13T12:52:21.488388Z","level":"INFO","fields":{"message":"MCP bridge tools loaded","count":22},"target":"temm1e"}
 Connected to openai (model: gpt-5.2)
 Budget: unlimited
 ---
 
-{"timestamp":"2026-03-13T12:52:21.489055Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:52:24.551598Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":344},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:52:24.551664Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.002069","total_spend_usd":"0.002069","budget_usd":"0.00","input_tokens":398,"output_tokens":98},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:52:24.551682Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:52:21.489055Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:52:24.551598Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":344},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:52:24.551664Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.002069","total_spend_usd":"0.002069","budget_usd":"0.00","input_tokens":398,"output_tokens":98},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:52:24.551682Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
-I’m running as SkyClaw via the OpenAI API, but I don’t have access to (or a reliable way to verify) the exact underlying model name or any internal “SkyClaw version” metadata from within this chat. If you tell me where you’re seeing a SkyClaw version label (app UI, logs, package.json, etc.), I can help you interpret it or locate it.
+I’m running as TEMM1E via the OpenAI API, but I don’t have access to (or a reliable way to verify) the exact underlying model name or any internal “TEMM1E version” metadata from within this chat. If you tell me where you’re seeing a TEMM1E version label (app UI, logs, package.json, etc.), I can help you interpret it or locate it.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 398
@@ -30,10 +30,10 @@ Output Tokens: 98
 Tools Used: 0
 Combined Tokens: 496
 Total Cost: $0.0021
-{"timestamp":"2026-03-13T12:52:40.220908Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:52:41.726302Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":121},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:52:41.726377Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.001689","total_spend_usd":"0.003757","budget_usd":"0.00","input_tokens":525,"output_tokens":55},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:52:41.726400Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:52:40.220908Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:52:41.726302Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":121},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:52:41.726377Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.001689","total_spend_usd":"0.003757","budget_usd":"0.00","input_tokens":525,"output_tokens":55},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:52:41.726400Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 37 * 19 + 42 = 745.
 
@@ -42,7 +42,7 @@ Clouds hum in server racks,
 Data drifts through silent skies,
 Scale with dawn’s soft light.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 525
@@ -50,15 +50,15 @@ Output Tokens: 55
 Tools Used: 0
 Combined Tokens: 580
 Total Cost: $0.0017
-{"timestamp":"2026-03-13T12:53:00.228881Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:53:01.545498Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Order","difficulty":"Standard","chat_text_len":113},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:53:01.545589Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.001643","total_spend_usd":"0.005400","budget_usd":"0.00","input_tokens":603,"output_tokens":42},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:53:01.545621Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Order","difficulty":"Standard"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:53:01.545667Z","level":"INFO","fields":{"message":"Compound task detected — injecting DONE criteria prompt"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:00.228881Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:01.545498Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Order","difficulty":"Standard","chat_text_len":113},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:53:01.545589Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.001643","total_spend_usd":"0.005400","budget_usd":"0.00","input_tokens":603,"output_tokens":42},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:53:01.545621Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Order","difficulty":"Standard"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:01.545667Z","level":"INFO","fields":{"message":"Compound task detected — injecting DONE criteria prompt"},"target":"temm1e_agent::runtime"}
 
 On it — I’ll outline a clear 3-phase deployment plan (build Docker image, run tests, then deploy to staging).
 
-skyclaw> {"timestamp":"2026-03-13T12:53:17.741691Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.024834","total_spend_usd":"0.030235","budget_usd":"0.00","input_tokens":6631,"output_tokens":945},"target":"skyclaw_agent::budget"}
+temm1e> {"timestamp":"2026-03-13T12:53:17.741691Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.024834","total_spend_usd":"0.030235","budget_usd":"0.00","input_tokens":6631,"output_tokens":945},"target":"temm1e_agent::budget"}
 
 DONE WHEN:
 1. A deployment plan is presented in exactly 3 phases: Build Docker image → Run tests → Deploy to staging.
@@ -148,7 +148,7 @@ DONE WHEN:
 3. Each phase has explicit success/exit criteria: **Yes**.
 4. Safeguards noted (tagging, reproducibility, rollback, health checks): **Yes**.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 2
 Input Tokens: 7,234
@@ -156,11 +156,11 @@ Output Tokens: 987
 Tools Used: 0
 Combined Tokens: 8,221
 Total Cost: $0.0265
-{"timestamp":"2026-03-13T12:53:20.233612Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:53:36.575066Z","level":"WARN","fields":{"message":"Failed to parse classification JSON","error":"EOF while parsing a value at line 1 column 0","raw":""},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:53:36.576513Z","level":"WARN","fields":{"message":"LLM classification failed, using rule-based fallback","error":"Provider error: Classification parse error: EOF while parsing a value at line 1 column 0"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:53:36.577195Z","level":"INFO","fields":{"message":"V2: Rule-based fallback classification","complexity":"Standard","prompt_tier":"Standard","max_iterations":5},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:53:57.197663Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.031381","total_spend_usd":"0.061616","budget_usd":"0.00","input_tokens":7740,"output_tokens":1274},"target":"skyclaw_agent::budget"}
+{"timestamp":"2026-03-13T12:53:20.233612Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:36.575066Z","level":"WARN","fields":{"message":"Failed to parse classification JSON","error":"EOF while parsing a value at line 1 column 0","raw":""},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:53:36.576513Z","level":"WARN","fields":{"message":"LLM classification failed, using rule-based fallback","error":"Provider error: Classification parse error: EOF while parsing a value at line 1 column 0"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:36.577195Z","level":"INFO","fields":{"message":"V2: Rule-based fallback classification","complexity":"Standard","prompt_tier":"Standard","max_iterations":5},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:57.197663Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.031381","total_spend_usd":"0.061616","budget_usd":"0.00","input_tokens":7740,"output_tokens":1274},"target":"temm1e_agent::budget"}
 
 ## Phase 1 — Install Prometheus (metrics collection)
 
@@ -269,7 +269,7 @@ Total Cost: $0.0265
 
 If you tell me your environment (Kubernetes vs VMs, cloud provider, and where you want alerts delivered—Slack/email/PagerDuty), I can tailor the exact commands and config snippets (ServiceMonitor/PrometheusRule/Alertmanager config or Grafana contact points).
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 7,740
@@ -277,10 +277,10 @@ Output Tokens: 1,274
 Tools Used: 0
 Combined Tokens: 9,014
 Total Cost: $0.0314
-{"timestamp":"2026-03-13T12:53:57.202359Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:54:11.072934Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":3117},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:54:11.073694Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.015521","total_spend_usd":"0.077136","budget_usd":"0.00","input_tokens":3045,"output_tokens":728},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:54:11.073734Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:53:57.202359Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:11.072934Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":3117},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:54:11.073694Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.015521","total_spend_usd":"0.077136","budget_usd":"0.00","input_tokens":3045,"output_tokens":728},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:54:11.073734Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 1) Rust ownership
 - Core idea: every value has a single “owner” (a variable/binding) responsible for freeing it when it goes out of scope. This enables memory safety without a garbage collector.
@@ -317,7 +317,7 @@ Total Cost: $0.0314
 
 If you tell me whether you want these summaries at a beginner, intermediate, or “Rustonomicon-level” depth, I can tailor examples and best practices accordingly.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 3,045
@@ -325,16 +325,16 @@ Output Tokens: 728
 Tools Used: 0
 Combined Tokens: 3,773
 Total Cost: $0.0155
-{"timestamp":"2026-03-13T12:54:11.078029Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:54:12.781126Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":186},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:54:12.781185Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.007376","total_spend_usd":"0.084513","budget_usd":"0.00","input_tokens":3647,"output_tokens":71},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:54:12.781201Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:11.078029Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:12.781126Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":186},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:54:12.781185Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.007376","total_spend_usd":"0.084513","budget_usd":"0.00","input_tokens":3647,"output_tokens":71},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:54:12.781201Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 Your first question was: “I need you to do two things at once: calculate 37 * 19 + 42, and also write a haiku about cloud computing.”
 
 We have had 6 turns so far (Turns 1 through 6).
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 3,647
@@ -342,14 +342,14 @@ Output Tokens: 71
 Tools Used: 0
 Combined Tokens: 3,718
 Total Cost: $0.0074
-{"timestamp":"2026-03-13T12:54:20.245105Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:54:21.677734Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Order","difficulty":"Standard","chat_text_len":155},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:54:21.677842Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.007105","total_spend_usd":"0.091618","budget_usd":"0.00","input_tokens":3684,"output_tokens":47},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:54:21.677881Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Order","difficulty":"Standard"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:20.245105Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:21.677734Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Order","difficulty":"Standard","chat_text_len":155},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:54:21.677842Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.007105","total_spend_usd":"0.091618","budget_usd":"0.00","input_tokens":3684,"output_tokens":47},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:54:21.677881Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Order","difficulty":"Standard"},"target":"temm1e_agent::runtime"}
 
 Got it — I’ll create a clear multi-phase plan with the dependencies you specified and outline what to do and what “done” looks like for each phase.
 
-skyclaw> {"timestamp":"2026-03-13T12:54:37.000781Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.029537","total_spend_usd":"0.121154","budget_usd":"0.00","input_tokens":10158,"output_tokens":840},"target":"skyclaw_agent::budget"}
+temm1e> {"timestamp":"2026-03-13T12:54:37.000781Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.029537","total_spend_usd":"0.121154","budget_usd":"0.00","input_tokens":10158,"output_tokens":840},"target":"temm1e_agent::budget"}
 
 ## Phase 1 — Set up Postgres
 
@@ -442,7 +442,7 @@ skyclaw> {"timestamp":"2026-03-13T12:54:37.000781Z","level":"INFO","fields":{"me
 - CI runs the suite automatically on PR/merge.
 - Failures produce actionable artifacts (logs/screenshots) for debugging.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 2
 Input Tokens: 13,842
@@ -450,16 +450,16 @@ Output Tokens: 887
 Tools Used: 0
 Combined Tokens: 14,729
 Total Cost: $0.0366
-{"timestamp":"2026-03-13T12:54:40.252671Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:54:42.200040Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":165},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:54:42.200139Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.008965","total_spend_usd":"0.130119","budget_usd":"0.00","input_tokens":4403,"output_tokens":90},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:54:42.200167Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:40.252671Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:54:42.200040Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":165},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:54:42.200139Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.008965","total_spend_usd":"0.130119","budget_usd":"0.00","input_tokens":4403,"output_tokens":90},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:54:42.200167Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 - 100°F → Celsius: (100 − 32) × 5/9 = 37.78°C (approx)
 - 50 km → miles: 50 × 0.621371 = 31.07 miles (approx)
 - 1024 bytes → kilobytes: 1024 / 1024 = 1 KB
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 4,403
@@ -467,10 +467,10 @@ Output Tokens: 90
 Tools Used: 0
 Combined Tokens: 4,493
 Total Cost: $0.0090
-{"timestamp":"2026-03-13T12:55:00.255330Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:55:11.969573Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":2622},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:55:11.969678Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.014289","total_spend_usd":"0.144408","budget_usd":"0.00","input_tokens":3509,"output_tokens":582},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:55:11.969733Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:55:00.255330Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:55:11.969573Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":2622},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:55:11.969678Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.014289","total_spend_usd":"0.144408","budget_usd":"0.00","input_tokens":3509,"output_tokens":582},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:55:11.969733Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 ### Threads
 - **Model:** OS-managed threads run code in parallel; the scheduler time-slices or runs them on multiple CPU cores.
@@ -497,7 +497,7 @@ Total Cost: $0.0090
 - **Best fit:** Systems with many independent stateful components (chat, games, IoT), distributed services, fault-tolerant architectures.
 
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 3,509
@@ -505,10 +505,10 @@ Output Tokens: 582
 Tools Used: 0
 Combined Tokens: 4,091
 Total Cost: $0.0143
-{"timestamp":"2026-03-13T12:55:20.263819Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"skyclaw_agent::runtime"}
-{"timestamp":"2026-03-13T12:55:26.025467Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":1342},"target":"skyclaw_agent::llm_classifier"}
-{"timestamp":"2026-03-13T12:55:26.026410Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.008806","total_spend_usd":"0.153214","budget_usd":"0.00","input_tokens":2768,"output_tokens":283},"target":"skyclaw_agent::budget"}
-{"timestamp":"2026-03-13T12:55:26.026446Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"skyclaw_agent::runtime"}
+{"timestamp":"2026-03-13T12:55:20.263819Z","level":"INFO","fields":{"message":"Processing inbound message","channel":"cli","chat_id":"cli","user_id":"local"},"target":"temm1e_agent::runtime"}
+{"timestamp":"2026-03-13T12:55:26.025467Z","level":"INFO","fields":{"message":"LLM classify: message classified","category":"Chat","difficulty":"Simple","chat_text_len":1342},"target":"temm1e_agent::llm_classifier"}
+{"timestamp":"2026-03-13T12:55:26.026410Z","level":"INFO","fields":{"message":"API cost recorded","call_cost_usd":"0.008806","total_spend_usd":"0.153214","budget_usd":"0.00","input_tokens":2768,"output_tokens":283},"target":"temm1e_agent::budget"}
+{"timestamp":"2026-03-13T12:55:26.026446Z","level":"INFO","fields":{"message":"V2: LLM classified message","category":"Chat","difficulty":"Simple"},"target":"temm1e_agent::runtime"}
 
 You asked for a series of “Turn N” tasks/questions across different technical topics:
 - You requested explanations of Rust concepts (ownership, async/await patterns, Result-based error handling).
@@ -524,7 +524,7 @@ Patterns in your questions:
 - You alternated between technical content (Rust, concurrency, system design) and meta-evaluation of the assistant’s memory/consistency (first question, turn count, conversation summary).
 - You favored structured outputs: phases with dependencies, parallel sections, concise conversions, and comparative explanations.
 
-skyclaw> 
+temm1e> 
 Model: gpt-5.2
 API Calls: 1
 Input Tokens: 2,768
@@ -532,4 +532,4 @@ Output Tokens: 283
 Tools Used: 0
 Combined Tokens: 3,051
 Total Cost: $0.0088
-{"timestamp":"2026-03-13T12:55:40.270693Z","level":"INFO","fields":{"message":"CLI session ended by user"},"target":"skyclaw_channels::cli"}
+{"timestamp":"2026-03-13T12:55:40.270693Z","level":"INFO","fields":{"message":"CLI session ended by user"},"target":"temm1e_channels::cli"}

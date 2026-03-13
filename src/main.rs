@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use base64::Engine as _;
 use clap::{Parser, Subcommand};
 use futures::FutureExt;
-use skyclaw_core::Channel;
+use temm1e_core::Channel;
 use tokio::sync::Mutex;
 
 // ── Secret-censoring channel wrapper ──────────────────────
@@ -24,20 +24,20 @@ impl Channel for SecretCensorChannel {
     fn name(&self) -> &str {
         self.inner.name()
     }
-    async fn start(&mut self) -> std::result::Result<(), skyclaw_core::types::error::SkyclawError> {
+    async fn start(&mut self) -> std::result::Result<(), temm1e_core::types::error::Temm1eError> {
         Ok(())
     }
-    async fn stop(&mut self) -> std::result::Result<(), skyclaw_core::types::error::SkyclawError> {
+    async fn stop(&mut self) -> std::result::Result<(), temm1e_core::types::error::Temm1eError> {
         Ok(())
     }
     async fn send_message(
         &self,
-        mut msg: skyclaw_core::types::message::OutboundMessage,
-    ) -> std::result::Result<(), skyclaw_core::types::error::SkyclawError> {
+        mut msg: temm1e_core::types::message::OutboundMessage,
+    ) -> std::result::Result<(), temm1e_core::types::error::Temm1eError> {
         msg.text = censor_secrets(&msg.text);
         self.inner.send_message(msg).await
     }
-    fn file_transfer(&self) -> Option<&dyn skyclaw_core::FileTransfer> {
+    fn file_transfer(&self) -> Option<&dyn temm1e_core::FileTransfer> {
         self.inner.file_transfer()
     }
     fn is_allowed(&self, user_id: &str) -> bool {
@@ -47,13 +47,13 @@ impl Channel for SecretCensorChannel {
         &self,
         chat_id: &str,
         message_id: &str,
-    ) -> std::result::Result<(), skyclaw_core::types::error::SkyclawError> {
+    ) -> std::result::Result<(), temm1e_core::types::error::Temm1eError> {
         self.inner.delete_message(chat_id, message_id).await
     }
 }
 
 #[derive(Parser)]
-#[command(name = "skyclaw")]
+#[command(name = "temm1e")]
 #[command(about = "Cloud-native Rust AI agent runtime — Telegram-native")]
 #[command(version = concat!(env!("CARGO_PKG_VERSION"), " — commit: ", env!("GIT_HASH"), " — date: ", env!("BUILD_DATE")))]
 struct Cli {
@@ -71,14 +71,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start the SkyClaw gateway daemon
+    /// Start the TEMM1E gateway daemon
     Start {
-        /// Run as a background daemon (requires prior setup via `skyclaw start` first)
+        /// Run as a background daemon (requires prior setup via `temm1e start` first)
         #[arg(short, long)]
         daemon: bool,
-        /// Log file path when running as daemon (default: ~/.skyclaw/skyclaw.log)
+        /// Log file path when running as daemon (default: ~/.temm1e/temm1e.log)
         #[arg(long)]
         log: Option<String>,
+        /// Temm1e personality mode: play (warm, chaotic :3) or work (sharp, precise >:3)
+        #[arg(long, default_value = "play")]
+        personality: String,
     },
     /// Stop a running daemon
     Stop,
@@ -203,17 +206,17 @@ fn is_placeholder_key(key: &str) -> bool {
 /// Validate a provider key by making a minimal API call.
 /// Returns Ok(provider_arc) if the key works, Err(message) if not.
 async fn validate_provider_key(
-    config: &skyclaw_core::types::config::ProviderConfig,
-) -> Result<Arc<dyn skyclaw_core::Provider>, String> {
-    let provider = skyclaw_providers::create_provider(config)
+    config: &temm1e_core::types::config::ProviderConfig,
+) -> Result<Arc<dyn temm1e_core::Provider>, String> {
+    let provider = temm1e_providers::create_provider(config)
         .map_err(|e| format!("Failed to create provider: {}", e))?;
-    let provider_arc: Arc<dyn skyclaw_core::Provider> = Arc::from(provider);
+    let provider_arc: Arc<dyn temm1e_core::Provider> = Arc::from(provider);
 
-    let test_req = skyclaw_core::types::message::CompletionRequest {
+    let test_req = temm1e_core::types::message::CompletionRequest {
         model: config.model.clone().unwrap_or_default(),
-        messages: vec![skyclaw_core::types::message::ChatMessage {
-            role: skyclaw_core::types::message::Role::User,
-            content: skyclaw_core::types::message::MessageContent::Text("Hi".to_string()),
+        messages: vec![temm1e_core::types::message::ChatMessage {
+            role: temm1e_core::types::message::Role::User,
+            content: temm1e_core::types::message::MessageContent::Text("Hi".to_string()),
         }],
         tools: Vec::new(),
         max_tokens: Some(1),
@@ -481,9 +484,9 @@ struct CredentialsProvider {
     base_url: Option<String>,
 }
 
-/// Check if a user is the admin by reading `~/.skyclaw/allowlist.toml`.
+/// Check if a user is the admin by reading `~/.temm1e/allowlist.toml`.
 fn is_admin_user(user_id: &str) -> bool {
-    let path = dirs::home_dir().map(|h| h.join(".skyclaw").join("allowlist.toml"));
+    let path = dirs::home_dir().map(|h| h.join(".temm1e").join("allowlist.toml"));
     let path = match path {
         Some(p) => p,
         None => return false,
@@ -506,7 +509,7 @@ fn is_admin_user(user_id: &str) -> bool {
 fn credentials_path() -> std::path::PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join(".skyclaw")
+        .join(".temm1e")
         .join("credentials.toml")
 }
 
@@ -552,7 +555,7 @@ async fn save_credentials(
 ) -> Result<()> {
     let dir = dirs::home_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join(".skyclaw");
+        .join(".temm1e");
     tokio::fs::create_dir_all(&dir).await?;
     let path = dir.join("credentials.toml");
 
@@ -594,9 +597,9 @@ async fn save_credentials(
 
 // ── Daemon helpers ───────────────────────────────────────────────────────
 
-/// Get the path to the PID file: `~/.skyclaw/skyclaw.pid`
+/// Get the path to the PID file: `~/.temm1e/temm1e.pid`
 fn pid_file_path() -> Option<std::path::PathBuf> {
-    dirs::home_dir().map(|h| h.join(".skyclaw").join("skyclaw.pid"))
+    dirs::home_dir().map(|h| h.join(".temm1e").join("temm1e.pid"))
 }
 
 /// Write the current process PID to the PID file.
@@ -688,7 +691,7 @@ fn load_active_provider_keys() -> Option<(String, Vec<String>, String, Option<St
 /// Build the onboarding welcome message with a pre-generated setup link.
 fn onboarding_message_with_link(setup_link: &str) -> String {
     format!(
-        "Welcome to SkyClaw!\n\n\
+        "Welcome to TEMM1E!\n\n\
          To get started, open this secure setup link:\n\
          {}\n\n\
          Paste your API key in the form, copy the encrypted blob, \
@@ -722,7 +725,7 @@ proxy anthropic https://gateway.ai/v1/anthropic sk-ant-xxx\n\
 proxy ollama https://ollama.com/v1 your-ollama-key";
 
 const SYSTEM_PROMPT_BASE: &str = "\
-You are SkyClaw, a cloud-native AI agent running on a remote server. \
+You are TEMM1E, a cloud-native AI agent running on a remote server. \
 You have full access to these tools:\n\
 - shell: run any command\n\
 - file_read / file_write / file_list: filesystem operations\n\
@@ -813,15 +816,15 @@ fn build_system_prompt() -> String {
     prompt.push_str(
         "\n\
 SELF-CONFIGURATION:\n\
-Your config lives at ~/.skyclaw/credentials.toml.\n\
+Your config lives at ~/.temm1e/credentials.toml.\n\
 To change the active provider or model, edit ONLY the 'active' field or 'model' \
 field in credentials.toml. NEVER modify or add API keys directly — keys are \
 managed by the onboarding system. If the user wants to add a key, tell them to \
 paste it in chat.\n\
-Changes take effect immediately — SkyClaw validates the key and auto-reloads \
+Changes take effect immediately — TEMM1E validates the key and auto-reloads \
 after each response. If a key is invalid, the switch is rejected and the \
 current provider stays active.\n\
-Users can add keys anytime by pasting them in chat. SkyClaw auto-detects the \
+Users can add keys anytime by pasting them in chat. TEMM1E auto-detects the \
 provider and validates before saving.\n\n\
 SECRET HANDLING (MANDATORY — NEVER VIOLATE):\n\
 There are 3 environments: USER (human) → CLAW (you, the agent) → PC (the server you run on).\n\
@@ -881,7 +884,7 @@ SAFETY RULES:\n\
         "\n\n\
 CUSTOM TOOL AUTHORING — SELF-CREATE:\n\
 You can create your own tools at runtime using self_create_tool. Created tools \
-persist across sessions in ~/.skyclaw/custom-tools/.\n\n\
+persist across sessions in ~/.temm1e/custom-tools/.\n\n\
 HOW IT WORKS:\n\
 1. Call self_create_tool with action='create', providing: name, description, \
    language (bash/python/node), script content, and a JSON Schema for parameters.\n\
@@ -924,15 +927,15 @@ fn censor_secrets(text: &str) -> String {
     censored
 }
 
-/// Format a SkyclawError into a user-friendly message for chat.
+/// Format a Temm1eError into a user-friendly message for chat.
 ///
 /// Translates raw error variants into human-readable explanations with
 /// actionable suggestions.  Raw JSON bodies and internal details are
 /// never exposed to end-users.
-fn format_user_error(e: &skyclaw_core::types::error::SkyclawError) -> String {
-    use skyclaw_core::types::error::SkyclawError;
+fn format_user_error(e: &temm1e_core::types::error::Temm1eError) -> String {
+    use temm1e_core::types::error::Temm1eError;
     match e {
-        SkyclawError::Provider(msg) => {
+        Temm1eError::Provider(msg) => {
             // Detect common sub-categories from the raw message
             if msg.contains("400") || msg.contains("Bad Request") || msg.contains("validation") {
                 "The AI provider rejected the request. This can happen when the model \
@@ -949,23 +952,23 @@ fn format_user_error(e: &skyclaw_core::types::error::SkyclawError) -> String {
                     .to_string()
             }
         }
-        SkyclawError::Auth(_) => {
+        Temm1eError::Auth(_) => {
             "API key issue — your key may be invalid or expired. Use /addkey to \
              update it."
                 .to_string()
         }
-        SkyclawError::RateLimited(_) => {
+        Temm1eError::RateLimited(_) => {
             "Rate limited by the AI provider. Please wait a moment and try again.".to_string()
         }
-        SkyclawError::Tool(msg) => {
+        Temm1eError::Tool(msg) => {
             format!("A tool encountered an error: {msg}")
         }
-        SkyclawError::Memory(_) => {
+        Temm1eError::Memory(_) => {
             "An error occurred accessing conversation memory. Your message wasn't \
              lost — please try again."
                 .to_string()
         }
-        SkyclawError::Config(_) => {
+        Temm1eError::Config(_) => {
             "Configuration error. Please check your setup with /status.".to_string()
         }
         _ => {
@@ -984,7 +987,7 @@ fn list_configured_providers() -> String {
 
     // Check Codex OAuth first
     #[cfg(feature = "codex-oauth")]
-    if skyclaw_codex_oauth::TokenStore::exists() {
+    if temm1e_codex_oauth::TokenStore::exists() {
         has_providers = true;
         lines.push("Configured providers:".to_string());
         lines.push("  openai-codex — model: gpt-5.4, OAuth (active)".to_string());
@@ -1036,7 +1039,7 @@ fn handle_model_command(args: &str) -> String {
         let has_creds = load_credentials_file()
             .map(|c| !c.providers.is_empty())
             .unwrap_or(false);
-        if !has_creds && skyclaw_codex_oauth::TokenStore::exists() {
+        if !has_creds && temm1e_codex_oauth::TokenStore::exists() {
             if args.is_empty() {
                 let codex_models = [
                     "gpt-5.4",
@@ -1300,7 +1303,7 @@ fn remove_provider(provider_name: &str) -> String {
 /// Decrypt an `enc:v1:` blob using the OTK from the setup token store.
 async fn decrypt_otk_blob(
     blob_b64: &str,
-    store: &skyclaw_gateway::SetupTokenStore,
+    store: &temm1e_gateway::SetupTokenStore,
     chat_id: &str,
 ) -> std::result::Result<String, String> {
     use aes_gcm::aead::{Aead, KeyInit};
@@ -1501,8 +1504,8 @@ fn is_stop_command(text: &str) -> bool {
 
 /// Retry `send_message` up to 3 times with exponential backoff.
 async fn send_with_retry(
-    sender: &dyn skyclaw_core::Channel,
-    reply: skyclaw_core::types::message::OutboundMessage,
+    sender: &dyn temm1e_core::Channel,
+    reply: temm1e_core::types::message::OutboundMessage,
 ) {
     let mut attempt = 0u32;
     let msg = reply;
@@ -1536,7 +1539,7 @@ async fn main() -> Result<()> {
         .init();
 
     // Initialize health endpoint uptime clock
-    skyclaw_gateway::health::init_start_time();
+    temm1e_gateway::health::init_start_time();
 
     // ── Global panic hook — route panics through tracing ─────
     // Without this, panics only write to stderr and are invisible in structured logs.
@@ -1565,7 +1568,7 @@ async fn main() -> Result<()> {
     if let Commands::Reset { confirm } = &cli.command {
         let data_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".skyclaw");
+            .join(".temm1e");
 
         if !data_dir.exists() {
             println!("Nothing to reset — {} does not exist.", data_dir.display());
@@ -1576,7 +1579,7 @@ async fn main() -> Result<()> {
         if let Some(pid) = read_pid_file() {
             if is_process_alive(pid) {
                 eprintln!(
-                    "SkyClaw daemon is running (PID {}). Stop it first with `skyclaw stop`.",
+                    "TEMM1E daemon is running (PID {}). Stop it first with `temm1e stop`.",
                     pid
                 );
                 std::process::exit(1);
@@ -1585,7 +1588,7 @@ async fn main() -> Result<()> {
 
         // Confirmation gate
         if !confirm {
-            println!("This will DELETE all SkyClaw local state:");
+            println!("This will DELETE all TEMM1E local state:");
             println!("  {}/", data_dir.display());
             println!();
             println!("  - credentials.toml    (saved API keys)");
@@ -1615,7 +1618,7 @@ async fn main() -> Result<()> {
         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let backup_dir = dirs::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(format!(".skyclaw.bak.{}", timestamp));
+            .join(format!(".temm1e.bak.{}", timestamp));
 
         // Copy directory tree for backup
         fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
@@ -1650,7 +1653,7 @@ async fn main() -> Result<()> {
                 // Re-create the empty directory so future commands don't fail
                 let _ = std::fs::create_dir_all(&data_dir);
                 println!("Factory reset complete.");
-                println!("Run `skyclaw start` for fresh onboarding.");
+                println!("Run `temm1e start` for fresh onboarding.");
             }
             Err(e) => {
                 eprintln!("Failed to remove {}: {}", data_dir.display(), e);
@@ -1664,9 +1667,9 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config_path = cli.config.as_ref().map(std::path::Path::new);
-    let mut config = skyclaw_core::config::load_config(config_path)?;
+    let mut config = temm1e_core::config::load_config(config_path)?;
 
-    tracing::info!(mode = %cli.mode, "SkyClaw starting");
+    tracing::info!(mode = %cli.mode, "TEMM1E starting");
 
     match cli.command {
         Commands::Stop => {
@@ -1681,10 +1684,10 @@ async fn main() -> Result<()> {
                         match status {
                             Ok(s) if s.success() => {
                                 remove_pid_file();
-                                println!("SkyClaw daemon (PID {}) stopped.", pid);
+                                println!("TEMM1E daemon (PID {}) stopped.", pid);
                             }
                             _ => {
-                                eprintln!("Failed to stop SkyClaw daemon (PID {}).", pid);
+                                eprintln!("Failed to stop TEMM1E daemon (PID {}).", pid);
                                 std::process::exit(1);
                             }
                         }
@@ -1697,10 +1700,10 @@ async fn main() -> Result<()> {
                         match status {
                             Ok(s) if s.success() => {
                                 remove_pid_file();
-                                println!("SkyClaw daemon (PID {}) stopped.", pid);
+                                println!("TEMM1E daemon (PID {}) stopped.", pid);
                             }
                             _ => {
-                                eprintln!("Failed to stop SkyClaw daemon (PID {}).", pid);
+                                eprintln!("Failed to stop TEMM1E daemon (PID {}).", pid);
                                 std::process::exit(1);
                             }
                         }
@@ -1708,32 +1711,40 @@ async fn main() -> Result<()> {
                 }
                 Some(pid) => {
                     eprintln!(
-                        "SkyClaw daemon (PID {}) is not running. Cleaning up stale PID file.",
+                        "TEMM1E daemon (PID {}) is not running. Cleaning up stale PID file.",
                         pid
                     );
                     remove_pid_file();
                 }
                 None => {
-                    eprintln!("No SkyClaw daemon running (no PID file found).");
+                    eprintln!("No TEMM1E daemon running (no PID file found).");
                     std::process::exit(1);
                 }
             }
         }
-        Commands::Start { daemon, log } => {
+        Commands::Start { daemon, log, personality } => {
+            // ── Parse personality mode ───────────────────────────
+            let temm1e_mode = match personality.to_lowercase().as_str() {
+                "work" => temm1e_core::types::config::Temm1eMode::Work,
+                _ => temm1e_core::types::config::Temm1eMode::Play,
+            };
+            config.mode = temm1e_mode;
+            tracing::info!(personality = %temm1e_mode, "Temm1e personality mode");
+
             // ── Daemon mode ──────────────────────────────────────
             if daemon {
-                let skyclaw_dir = dirs::home_dir()
+                let temm1e_dir = dirs::home_dir()
                     .unwrap_or_else(|| std::path::PathBuf::from("."))
-                    .join(".skyclaw");
-                let _ = std::fs::create_dir_all(&skyclaw_dir);
+                    .join(".temm1e");
+                let _ = std::fs::create_dir_all(&temm1e_dir);
 
                 // Check for saved credentials — daemon requires prior setup
-                let creds_path = skyclaw_dir.join("credentials.toml");
+                let creds_path = temm1e_dir.join("credentials.toml");
                 if !creds_path.exists() {
                     eprintln!(
                         "Error: No saved credentials found at {}\n\n\
                          First-time setup requires foreground mode to complete onboarding.\n\
-                         Run `skyclaw start` (without -d) first, then use -d for subsequent runs.",
+                         Run `temm1e start` (without -d) first, then use -d for subsequent runs.",
                         creds_path.display()
                     );
                     std::process::exit(1);
@@ -1743,7 +1754,7 @@ async fn main() -> Result<()> {
                 if let Some(pid) = read_pid_file() {
                     if is_process_alive(pid) {
                         eprintln!(
-                            "SkyClaw daemon is already running (PID {}). Use `skyclaw stop` first.",
+                            "TEMM1E daemon is already running (PID {}). Use `temm1e stop` first.",
                             pid
                         );
                         std::process::exit(1);
@@ -1755,7 +1766,7 @@ async fn main() -> Result<()> {
                 // Resolve log path
                 let log_path = log
                     .map(std::path::PathBuf::from)
-                    .unwrap_or_else(|| skyclaw_dir.join("skyclaw.log"));
+                    .unwrap_or_else(|| temm1e_dir.join("temm1e.log"));
 
                 // Re-exec ourselves as a detached child
                 let exe = std::env::current_exe().expect("cannot resolve own executable path");
@@ -1807,7 +1818,7 @@ async fn main() -> Result<()> {
                             let _ = std::fs::write(&path, child_pid.to_string());
                         }
                         println!(
-                            "SkyClaw daemon started (PID {}).\n  Log: {}\n  Stop: skyclaw stop",
+                            "TEMM1E daemon started (PID {}).\n  Log: {}\n  Stop: temm1e stop",
                             child_pid,
                             log_path.display()
                         );
@@ -1821,10 +1832,10 @@ async fn main() -> Result<()> {
             }
 
             // ── Normal foreground start ──────────────────────────
-            // Write PID file so `skyclaw stop` works even in foreground
+            // Write PID file so `temm1e stop` works even in foreground
             write_pid_file();
 
-            tracing::info!("Starting SkyClaw gateway");
+            tracing::info!("Starting TEMM1E gateway");
 
             // ── Resolve API credentials ────────────────────────
             // Priority: config file > saved credentials > onboarding
@@ -1854,22 +1865,22 @@ async fn main() -> Result<()> {
             let memory_url = config.memory.path.clone().unwrap_or_else(|| {
                 let data_dir = dirs::home_dir()
                     .unwrap_or_else(|| std::path::PathBuf::from("."))
-                    .join(".skyclaw");
+                    .join(".temm1e");
                 if let Err(e) = std::fs::create_dir_all(&data_dir) {
                     tracing::warn!(error = %e, path = %data_dir.display(), "Failed to create directory");
                 }
                 format!("sqlite:{}/memory.db?mode=rwc", data_dir.display())
             });
-            let memory: Arc<dyn skyclaw_core::Memory> = Arc::from(
-                skyclaw_memory::create_memory_backend(&config.memory.backend, &memory_url).await?,
+            let memory: Arc<dyn temm1e_core::Memory> = Arc::from(
+                temm1e_memory::create_memory_backend(&config.memory.backend, &memory_url).await?,
             );
             tracing::info!(backend = %config.memory.backend, "Memory initialized");
 
             // ── Telegram channel ───────────────────────────────
-            let mut channels: Vec<Arc<dyn skyclaw_core::Channel>> = Vec::new();
-            let mut primary_channel: Option<Arc<dyn skyclaw_core::Channel>> = None;
+            let mut channels: Vec<Arc<dyn temm1e_core::Channel>> = Vec::new();
+            let mut primary_channel: Option<Arc<dyn temm1e_core::Channel>> = None;
             let mut tg_rx: Option<
-                tokio::sync::mpsc::Receiver<skyclaw_core::types::message::InboundMessage>,
+                tokio::sync::mpsc::Receiver<temm1e_core::types::message::InboundMessage>,
             > = None;
 
             // Auto-inject Telegram config from env var when no config entry exists.
@@ -1879,7 +1890,7 @@ async fn main() -> Result<()> {
                     if !token.is_empty() {
                         config.channel.insert(
                             "telegram".to_string(),
-                            skyclaw_core::types::config::ChannelConfig {
+                            temm1e_core::types::config::ChannelConfig {
                                 enabled: true,
                                 token: Some(token),
                                 allowlist: vec![],
@@ -1894,10 +1905,10 @@ async fn main() -> Result<()> {
 
             if let Some(tg_config) = config.channel.get("telegram") {
                 if tg_config.enabled {
-                    let mut tg = skyclaw_channels::TelegramChannel::new(tg_config)?;
+                    let mut tg = temm1e_channels::TelegramChannel::new(tg_config)?;
                     tg.start().await?;
                     tg_rx = tg.take_receiver();
-                    let tg_arc: Arc<dyn skyclaw_core::Channel> = Arc::new(tg);
+                    let tg_arc: Arc<dyn temm1e_core::Channel> = Arc::new(tg);
                     channels.push(tg_arc.clone());
                     primary_channel = Some(tg_arc.clone());
                     tracing::info!("Telegram channel started");
@@ -1905,52 +1916,55 @@ async fn main() -> Result<()> {
             }
 
             // ── Pending messages ───────────────────────────────
-            let pending_messages: skyclaw_tools::PendingMessages =
+            let pending_messages: temm1e_tools::PendingMessages =
                 Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
 
             // ── OTK setup token store ───────────────────────────
-            let setup_tokens = skyclaw_gateway::SetupTokenStore::new();
+            let setup_tokens = temm1e_gateway::SetupTokenStore::new();
 
             // ── Pending raw key pastes (from /addkey unsafe) ────
             let pending_raw_keys: Arc<Mutex<HashSet<String>>> =
                 Arc::new(Mutex::new(HashSet::new()));
 
             // ── Usage store (shares same SQLite DB as memory) ────
-            let usage_store: Arc<dyn skyclaw_core::UsageStore> =
-                Arc::new(skyclaw_memory::SqliteUsageStore::new(&memory_url).await?);
+            let usage_store: Arc<dyn temm1e_core::UsageStore> =
+                Arc::new(temm1e_memory::SqliteUsageStore::new(&memory_url).await?);
             tracing::info!("Usage store initialized");
 
             // ── Tools (with secret-censoring channel wrapper) ───
             let censored_channel: Option<Arc<dyn Channel>> = primary_channel
                 .clone()
                 .map(|ch| Arc::new(SecretCensorChannel { inner: ch }) as Arc<dyn Channel>);
-            let mut tools = skyclaw_tools::create_tools(
+            let shared_mode: temm1e_tools::SharedMode =
+                Arc::new(tokio::sync::RwLock::new(config.mode));
+            let mut tools = temm1e_tools::create_tools(
                 &config.tools,
                 censored_channel,
                 Some(pending_messages.clone()),
                 Some(memory.clone()),
-                Some(Arc::new(setup_tokens.clone()) as Arc<dyn skyclaw_core::SetupLinkGenerator>),
+                Some(Arc::new(setup_tokens.clone()) as Arc<dyn temm1e_core::SetupLinkGenerator>),
                 Some(usage_store.clone()),
+                Some(shared_mode.clone()),
             );
             tracing::info!(count = tools.len(), "Tools initialized");
 
             // ── Custom script tools (user/agent-authored) ──────
-            let custom_tool_registry = Arc::new(skyclaw_tools::CustomToolRegistry::new());
+            let custom_tool_registry = Arc::new(temm1e_tools::CustomToolRegistry::new());
             {
                 let custom_tools = custom_tool_registry.load_tools();
                 if !custom_tools.is_empty() {
                     tracing::info!(count = custom_tools.len(), "Custom script tools loaded");
                     tools.extend(custom_tools);
                 }
-                tools.push(Arc::new(skyclaw_tools::SelfCreateTool::new(
+                tools.push(Arc::new(temm1e_tools::SelfCreateTool::new(
                     custom_tool_registry.clone(),
                 )));
             }
 
             // ── MCP servers (external tool sources) ──────────
             #[cfg(feature = "mcp")]
-            let mcp_manager: Arc<skyclaw_mcp::McpManager> = {
-                let mgr = Arc::new(skyclaw_mcp::McpManager::new());
+            let mcp_manager: Arc<temm1e_mcp::McpManager> = {
+                let mgr = Arc::new(temm1e_mcp::McpManager::new());
                 mgr.connect_all().await;
                 let tool_names: Vec<String> = tools.iter().map(|t| t.name().to_string()).collect();
                 let mcp_tools = mgr.bridge_tools(&tool_names).await;
@@ -1959,16 +1973,16 @@ async fn main() -> Result<()> {
                     tools.extend(mcp_tools);
                 }
                 // Add MCP agent tools: manage, self-extend (discover), self-add (install)
-                tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(mgr.clone())));
-                tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mgr.clone())));
+                tools.push(Arc::new(temm1e_mcp::McpManageTool::new(mgr.clone())));
+                tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(mgr.clone())));
                 mgr
             };
 
             let system_prompt = Some(build_system_prompt());
 
             // ── Agent state (None during onboarding) ───────────
-            let agent_state: Arc<tokio::sync::RwLock<Option<Arc<skyclaw_agent::AgentRuntime>>>> =
+            let agent_state: Arc<tokio::sync::RwLock<Option<Arc<temm1e_agent::AgentRuntime>>>> =
                 Arc::new(tokio::sync::RwLock::new(None));
 
             if let Some((ref pname, ref key, ref model)) = credentials {
@@ -1989,7 +2003,7 @@ async fn main() -> Result<()> {
                         .unwrap_or_else(|| (vec![key.clone()], None));
                     let effective_base_url =
                         saved_base_url.or_else(|| config.provider.base_url.clone());
-                    let provider_config = skyclaw_core::types::config::ProviderConfig {
+                    let provider_config = temm1e_core::types::config::ProviderConfig {
                         name: Some(pname.clone()),
                         api_key: Some(key.clone()),
                         keys: all_keys,
@@ -1998,17 +2012,17 @@ async fn main() -> Result<()> {
                         extra_headers: config.provider.extra_headers.clone(),
                     };
                     // Create provider — route to Codex OAuth if configured
-                    let provider: Arc<dyn skyclaw_core::Provider> = {
+                    let provider: Arc<dyn temm1e_core::Provider> = {
                         #[cfg(feature = "codex-oauth")]
                         if pname == "openai-codex" {
                             let token_store =
-                                std::sync::Arc::new(skyclaw_codex_oauth::TokenStore::load()?);
-                            Arc::new(skyclaw_codex_oauth::CodexResponsesProvider::new(
+                                std::sync::Arc::new(temm1e_codex_oauth::TokenStore::load()?);
+                            Arc::new(temm1e_codex_oauth::CodexResponsesProvider::new(
                                 model.clone(),
                                 token_store,
                             ))
                         } else {
-                            Arc::from(skyclaw_providers::create_provider(&provider_config)?)
+                            Arc::from(temm1e_providers::create_provider(&provider_config)?)
                         }
                         #[cfg(not(feature = "codex-oauth"))]
                         {
@@ -2018,11 +2032,11 @@ async fn main() -> Result<()> {
                                      Build with: cargo build --features codex-oauth"
                                 ));
                             }
-                            Arc::from(skyclaw_providers::create_provider(&provider_config)?)
+                            Arc::from(temm1e_providers::create_provider(&provider_config)?)
                         }
                     };
                     let agent = Arc::new(
-                        skyclaw_agent::AgentRuntime::with_limits(
+                        temm1e_agent::AgentRuntime::with_limits(
                             provider.clone(),
                             memory.clone(),
                             tools.clone(),
@@ -2035,7 +2049,7 @@ async fn main() -> Result<()> {
                             config.agent.max_spend_usd,
                         )
                         .with_v2_optimizations(config.agent.v2_optimizations)
-                        .with_parallel_phases(config.agent.parallel_phases),
+                        .with_parallel_phases(config.agent.parallel_phases).with_shared_mode(shared_mode.clone()),
                     );
                     *agent_state.write().await = Some(agent);
                     tracing::info!(provider = %pname, model = %model, "Agent initialized");
@@ -2044,19 +2058,19 @@ async fn main() -> Result<()> {
                 // Check if Codex OAuth tokens exist — use those instead of API key
                 #[cfg(feature = "codex-oauth")]
                 {
-                    if skyclaw_codex_oauth::TokenStore::exists() {
+                    if temm1e_codex_oauth::TokenStore::exists() {
                         // Always use Codex-compatible model — config model is for API key provider
                         let model = "gpt-5.4".to_string();
-                        match skyclaw_codex_oauth::TokenStore::load() {
+                        match temm1e_codex_oauth::TokenStore::load() {
                             Ok(store) => {
                                 let token_store = std::sync::Arc::new(store);
-                                let provider: Arc<dyn skyclaw_core::Provider> =
-                                    Arc::new(skyclaw_codex_oauth::CodexResponsesProvider::new(
+                                let provider: Arc<dyn temm1e_core::Provider> =
+                                    Arc::new(temm1e_codex_oauth::CodexResponsesProvider::new(
                                         model.clone(),
                                         token_store,
                                     ));
                                 let agent = Arc::new(
-                                    skyclaw_agent::AgentRuntime::with_limits(
+                                    temm1e_agent::AgentRuntime::with_limits(
                                         provider.clone(),
                                         memory.clone(),
                                         tools.clone(),
@@ -2069,7 +2083,7 @@ async fn main() -> Result<()> {
                                         config.agent.max_spend_usd,
                                     )
                                     .with_v2_optimizations(config.agent.v2_optimizations)
-                                    .with_parallel_phases(config.agent.parallel_phases),
+                                    .with_parallel_phases(config.agent.parallel_phases).with_shared_mode(shared_mode.clone()),
                                 );
                                 *agent_state.write().await = Some(agent);
                                 tracing::info!(provider = "openai-codex", model = %model, "Agent initialized via Codex OAuth");
@@ -2090,7 +2104,7 @@ async fn main() -> Result<()> {
 
             // ── Unified message channel ────────────────────────
             let (msg_tx, mut msg_rx) =
-                tokio::sync::mpsc::channel::<skyclaw_core::types::message::InboundMessage>(32);
+                tokio::sync::mpsc::channel::<temm1e_core::types::message::InboundMessage>(32);
 
             // Track spawned task handles for graceful shutdown
             let mut task_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
@@ -2110,7 +2124,7 @@ async fn main() -> Result<()> {
             // ── Workspace ──────────────────────────────────────
             let workspace_path = dirs::home_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join(".skyclaw")
+                .join(".temm1e")
                 .join("workspace");
             if let Err(e) = std::fs::create_dir_all(&workspace_path) {
                 tracing::warn!(error = %e, path = %workspace_path.display(), "Failed to create directory");
@@ -2123,7 +2137,7 @@ async fn main() -> Result<()> {
                     .report_to
                     .clone()
                     .unwrap_or_else(|| "heartbeat".to_string());
-                let runner = skyclaw_automation::HeartbeatRunner::new(
+                let runner = temm1e_automation::HeartbeatRunner::new(
                     config.heartbeat.clone(),
                     workspace_path.clone(),
                     heartbeat_chat_id,
@@ -2143,7 +2157,7 @@ async fn main() -> Result<()> {
 
             /// Tracks the active task state for a single chat.
             struct ChatSlot {
-                tx: tokio::sync::mpsc::Sender<skyclaw_core::types::message::InboundMessage>,
+                tx: tokio::sync::mpsc::Sender<temm1e_core::types::message::InboundMessage>,
                 interrupt: Arc<AtomicBool>,
                 is_heartbeat: Arc<AtomicBool>,
                 cancel_token: tokio_util::sync::CancellationToken,
@@ -2233,9 +2247,10 @@ async fn main() -> Result<()> {
                         }
 
                         // Ensure a worker exists for this chat_id
+                        let shared_mode_for_worker = shared_mode.clone();
                         let slot = slots.entry(chat_id.clone()).or_insert_with(|| {
                             let (chat_tx, mut chat_rx) =
-                                tokio::sync::mpsc::channel::<skyclaw_core::types::message::InboundMessage>(4);
+                                tokio::sync::mpsc::channel::<temm1e_core::types::message::InboundMessage>(4);
 
                             let interrupt = Arc::new(AtomicBool::new(false));
                             let is_heartbeat = Arc::new(AtomicBool::new(false));
@@ -2261,6 +2276,7 @@ async fn main() -> Result<()> {
                             let is_heartbeat_clone = is_heartbeat.clone();
                             let cancel_token_clone = cancel_token.clone();
                             let pending_for_worker = pending_clone.clone();
+                            let shared_mode = shared_mode_for_worker;
                             let setup_tokens_worker = setup_tokens_clone.clone();
                             let pending_raw_keys_worker = pending_raw_keys_clone.clone();
                             let usage_store_worker = usage_store_clone.clone();
@@ -2269,14 +2285,14 @@ async fn main() -> Result<()> {
                             tokio::spawn(async move {
                                 // ── Restore conversation history from memory backend ──
                                 let history_key = format!("chat_history:{}", worker_chat_id);
-                                let mut persistent_history: Vec<skyclaw_core::types::message::ChatMessage> =
+                                let mut persistent_history: Vec<temm1e_core::types::message::ChatMessage> =
                                     match memory.get(&history_key).await {
                                         Ok(Some(entry)) => {
                                             match serde_json::from_str(&entry.content) {
                                                 Ok(h) => {
                                                     tracing::info!(
                                                         chat_id = %worker_chat_id,
-                                                        messages = %Vec::<skyclaw_core::types::message::ChatMessage>::len(&h),
+                                                        messages = %Vec::<temm1e_core::types::message::ChatMessage>::len(&h),
                                                         "Restored conversation history from memory"
                                                     );
                                                     h
@@ -2318,7 +2334,7 @@ async fn main() -> Result<()> {
                                     // Watch channel created per-message; future phases
                                     // will expose the receiver to observers.
                                     let (status_tx, _status_rx) = tokio::sync::watch::channel(
-                                        skyclaw_agent::AgentTaskStatus::default(),
+                                        temm1e_agent::AgentTaskStatus::default(),
                                     );
                                     let cancel = cancel_token_clone.clone();
 
@@ -2331,10 +2347,10 @@ async fn main() -> Result<()> {
                                         let otk = setup_tokens_worker.generate(&msg.chat_id).await;
                                         let otk_hex = hex::encode(otk);
                                         let link = format!(
-                                            "https://nagisanzenin.github.io/skyclaw/setup#{}",
+                                            "https://nagisanzenin.github.io/temm1e/setup#{}",
                                             otk_hex
                                         );
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: format!(
                                                 "Secure key setup:\n\n\
@@ -2357,7 +2373,7 @@ async fn main() -> Result<()> {
                                     // /addkey unsafe — raw key paste mode
                                     if cmd_lower == "/addkey unsafe" {
                                         pending_raw_keys_worker.lock().await.insert(msg.chat_id.clone());
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: "Paste your API key in the next message.\n\n\
                                                    Warning: the key will be visible in chat history.\n\
@@ -2374,7 +2390,7 @@ async fn main() -> Result<()> {
                                     // /keys — list configured providers
                                     if cmd_lower == "/keys" {
                                         let info = list_configured_providers();
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: info,
                                             reply_to: Some(msg.id.clone()),
@@ -2415,15 +2431,15 @@ async fn main() -> Result<()> {
                                                         .unwrap_or("gpt-5.4")
                                                         .trim()
                                                         .to_string();
-                                                    match skyclaw_codex_oauth::TokenStore::load() {
+                                                    match temm1e_codex_oauth::TokenStore::load() {
                                                         Ok(store) => {
                                                             let token_store = std::sync::Arc::new(store);
-                                                            let provider: Arc<dyn skyclaw_core::Provider> =
-                                                                Arc::new(skyclaw_codex_oauth::CodexResponsesProvider::new(
+                                                            let provider: Arc<dyn temm1e_core::Provider> =
+                                                                Arc::new(temm1e_codex_oauth::CodexResponsesProvider::new(
                                                                     new_model.clone(),
                                                                     token_store,
                                                                 ));
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -2434,7 +2450,7 @@ async fn main() -> Result<()> {
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
                                                             tracing::info!(
                                                                 provider = "openai-codex",
@@ -2457,7 +2473,7 @@ async fn main() -> Result<()> {
                                                         .cloned()
                                                         .collect();
                                                     let effective_base_url = prov.base_url.clone().or_else(|| base_url.clone());
-                                                    let reload_config = skyclaw_core::types::config::ProviderConfig {
+                                                    let reload_config = temm1e_core::types::config::ProviderConfig {
                                                         name: Some(creds.active.clone()),
                                                         api_key: valid_keys.first().cloned(),
                                                         keys: valid_keys,
@@ -2467,7 +2483,7 @@ async fn main() -> Result<()> {
                                                     };
                                                     match validate_provider_key(&reload_config).await {
                                                         Ok(validated_provider) => {
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 validated_provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -2478,7 +2494,7 @@ async fn main() -> Result<()> {
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
                                                             tracing::info!(
                                                                 provider = %creds.active,
@@ -2515,7 +2531,7 @@ async fn main() -> Result<()> {
                                             result
                                         };
 
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: final_text,
                                             reply_to: Some(msg.id.clone()),
@@ -2530,7 +2546,7 @@ async fn main() -> Result<()> {
                                     if cmd_lower.starts_with("/removekey") {
                                         let provider_arg = msg_text_cmd.trim()["/removekey".len()..].trim();
                                         let result = remove_provider(provider_arg);
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: result,
                                             reply_to: Some(msg.id.clone()),
@@ -2569,7 +2585,7 @@ async fn main() -> Result<()> {
                                             }
                                             Err(e) => format!("Failed to query usage: {}", e),
                                         };
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: summary_text,
                                             reply_to: Some(msg.id.clone()),
@@ -2583,7 +2599,7 @@ async fn main() -> Result<()> {
                                     // /help — list available commands
                                     if cmd_lower == "/help" {
                                         let help_text = format!("\
-skyclaw {} — commit: {} — date: {}\n\n\
+temm1e {} — commit: {} — date: {}\n\n\
 Available commands:\n\n\
 /help — Show this help message\n\
 /addkey — Securely add an API key (encrypted OTK flow)\n\
@@ -2599,13 +2615,13 @@ Available commands:\n\n\
 /mcp restart <name> — Restart an MCP server\n\
 /reload — Hot-reload config and agent (admin)\n\
 /reset — Factory reset all local state (admin)\n\
-/restart — Restart SkyClaw process (admin)\n\n\
+/restart — Restart TEMM1E process (admin)\n\n\
 Just type a message to chat with the AI agent.",
                                             env!("CARGO_PKG_VERSION"),
                                             env!("GIT_HASH"),
                                             env!("BUILD_DATE"),
                                         );
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: help_text.to_string(),
                                             reply_to: Some(msg.id.clone()),
@@ -2674,12 +2690,12 @@ Just type a message to chat with the AI agent.",
                                                     )
                                                 } else {
                                                     let config = if target.starts_with("http://") || target.starts_with("https://") {
-                                                        skyclaw_mcp::McpServerConfig::http(name, target)
+                                                        temm1e_mcp::McpServerConfig::http(name, target)
                                                     } else {
                                                         let cmd_parts: Vec<&str> = target.split_whitespace().collect();
                                                         let command = cmd_parts[0];
                                                         let args: Vec<String> = cmd_parts[1..].iter().map(|s| s.to_string()).collect();
-                                                        skyclaw_mcp::McpServerConfig::stdio(name, command, args)
+                                                        temm1e_mcp::McpServerConfig::stdio(name, command, args)
                                                     };
                                                     match mcp_mgr.add_server(config).await {
                                                         Ok(count) => {
@@ -2688,17 +2704,17 @@ Just type a message to chat with the AI agent.",
                                                                 let mut new_tools = tools_template.clone();
                                                                 let mcp_tools = mcp_mgr.bridge_tools(&tool_names).await;
                                                                 new_tools.extend(mcp_tools);
-                                                                new_tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(mcp_mgr.clone())));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
-                                                                let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                                new_tools.push(Arc::new(temm1e_mcp::McpManageTool::new(mcp_mgr.clone())));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
+                                                                let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                     agent.provider_arc(),
                                                                     memory.clone(),
                                                                     new_tools,
                                                                     agent.model().to_string(),
                                                                     Some(build_system_prompt()),
                                                                     max_turns, max_ctx, max_rounds, max_task_duration, max_spend,
-                                                                ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                                ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                                 *agent_state.write().await = Some(new_agent);
                                                             }
                                                             mcp_mgr.take_tools_changed();
@@ -2717,17 +2733,17 @@ Just type a message to chat with the AI agent.",
                                                         let mut new_tools = tools_template.clone();
                                                         let mcp_tools = mcp_mgr.bridge_tools(&tool_names).await;
                                                         new_tools.extend(mcp_tools);
-                                                        new_tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(mcp_mgr.clone())));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
-                                                        let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                        new_tools.push(Arc::new(temm1e_mcp::McpManageTool::new(mcp_mgr.clone())));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
+                                                        let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                             agent.provider_arc(),
                                                             memory.clone(),
                                                             new_tools,
                                                             agent.model().to_string(),
                                                             Some(build_system_prompt()),
                                                             max_turns, max_ctx, max_rounds, max_task_duration, max_spend,
-                                                        ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                        ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                         *agent_state.write().await = Some(new_agent);
                                                     }
                                                     mcp_mgr.take_tools_changed();
@@ -2744,17 +2760,17 @@ Just type a message to chat with the AI agent.",
                                                         let mut new_tools = tools_template.clone();
                                                         let mcp_tools = mcp_mgr.bridge_tools(&tool_names).await;
                                                         new_tools.extend(mcp_tools);
-                                                        new_tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(mcp_mgr.clone())));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                                                new_tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
-                                                        let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                        new_tools.push(Arc::new(temm1e_mcp::McpManageTool::new(mcp_mgr.clone())));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                                                new_tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
+                                                        let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                             agent.provider_arc(),
                                                             memory.clone(),
                                                             new_tools,
                                                             agent.model().to_string(),
                                                             Some(build_system_prompt()),
                                                             max_turns, max_ctx, max_rounds, max_task_duration, max_spend,
-                                                        ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                        ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                         *agent_state.write().await = Some(new_agent);
                                                     }
                                                     mcp_mgr.take_tools_changed();
@@ -2773,7 +2789,7 @@ Just type a message to chat with the AI agent.",
                                              /mcp add playwright npx @playwright/mcp@latest\n\
                                              /mcp add myapi https://mcp.example.com/sse".to_string()
                                         };
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: mcp_reply,
                                             reply_to: Some(msg.id.clone()),
@@ -2787,7 +2803,7 @@ Just type a message to chat with the AI agent.",
                                     // /reload — hot-reload config and rebuild agent (admin only)
                                     if cmd_lower == "/reload" {
                                         if !is_admin_user(&msg.user_id) {
-                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                 chat_id: msg.chat_id.clone(),
                                                 text: "Only the admin can use /reload.".to_string(),
                                                 reply_to: Some(msg.id.clone()),
@@ -2810,7 +2826,7 @@ Just type a message to chat with the AI agent.",
                                                     "Reload failed: no valid API keys found.".to_string()
                                                 } else {
                                                     let effective_base_url = prov.base_url.clone().or_else(|| base_url.clone());
-                                                    let reload_config = skyclaw_core::types::config::ProviderConfig {
+                                                    let reload_config = temm1e_core::types::config::ProviderConfig {
                                                         name: Some(prov.name.clone()),
                                                         api_key: valid_keys.first().cloned(),
                                                         keys: valid_keys,
@@ -2820,7 +2836,7 @@ Just type a message to chat with the AI agent.",
                                                     };
                                                     match validate_provider_key(&reload_config).await {
                                                         Ok(validated_provider) => {
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 validated_provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -2831,7 +2847,7 @@ Just type a message to chat with the AI agent.",
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
                                                             tracing::info!(
                                                                 provider = %prov.name,
@@ -2856,7 +2872,7 @@ Just type a message to chat with the AI agent.",
                                             "Reload failed: no credentials file found.".to_string()
                                         };
 
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: reload_result,
                                             reply_to: Some(msg.id.clone()),
@@ -2870,7 +2886,7 @@ Just type a message to chat with the AI agent.",
                                     // /reset — factory reset from messaging (admin only)
                                     if cmd_lower == "/reset" {
                                         if !is_admin_user(&msg.user_id) {
-                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                 chat_id: msg.chat_id.clone(),
                                                 text: "Only the admin can use /reset.".to_string(),
                                                 reply_to: Some(msg.id.clone()),
@@ -2885,7 +2901,7 @@ Just type a message to chat with the AI agent.",
 
                                         let data_dir = dirs::home_dir()
                                             .unwrap_or_else(|| std::path::PathBuf::from("."))
-                                            .join(".skyclaw");
+                                            .join(".temm1e");
 
                                         let reset_result = if !data_dir.exists() {
                                             "Nothing to reset — no local state found.".to_string()
@@ -2894,7 +2910,7 @@ Just type a message to chat with the AI agent.",
                                             let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
                                             let backup_dir = dirs::home_dir()
                                                 .unwrap_or_else(|| std::path::PathBuf::from("."))
-                                                .join(format!(".skyclaw.bak.{}", timestamp));
+                                                .join(format!(".temm1e.bak.{}", timestamp));
 
                                             fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
                                                 std::fs::create_dir_all(dst)?;
@@ -2929,7 +2945,7 @@ Just type a message to chat with the AI agent.",
                                             }
                                         };
 
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
                                             text: reset_result,
                                             reply_to: Some(msg.id.clone()),
@@ -2940,10 +2956,10 @@ Just type a message to chat with the AI agent.",
                                         return;
                                     }
 
-                                    // /restart — restart the SkyClaw process, server mode (admin only)
+                                    // /restart — restart the TEMM1E process, server mode (admin only)
                                     if cmd_lower == "/restart" {
                                         if !is_admin_user(&msg.user_id) {
-                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                 chat_id: msg.chat_id.clone(),
                                                 text: "Only the admin can use /restart.".to_string(),
                                                 reply_to: Some(msg.id.clone()),
@@ -2958,9 +2974,9 @@ Just type a message to chat with the AI agent.",
                                             chat_id = %msg.chat_id,
                                             "Restart requested via /restart command"
                                         );
-                                        let reply = skyclaw_core::types::message::OutboundMessage {
+                                        let reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: msg.chat_id.clone(),
-                                            text: "Restarting SkyClaw... I'll be back in a few seconds.".to_string(),
+                                            text: "Restarting TEMM1E... I'll be back in a few seconds.".to_string(),
                                             reply_to: Some(msg.id.clone()),
                                             parse_mode: None,
                                         };
@@ -2969,7 +2985,7 @@ Just type a message to chat with the AI agent.",
                                         // Spawn a delayed restart: wait for this process to exit,
                                         // then start a new one. Cross-platform.
                                         let exe = std::env::current_exe()
-                                            .unwrap_or_else(|_| std::path::PathBuf::from("skyclaw"));
+                                            .unwrap_or_else(|_| std::path::PathBuf::from("temm1e"));
                                         let exe_str = exe.to_string_lossy().to_string();
 
                                         #[cfg(unix)]
@@ -3009,7 +3025,7 @@ Just type a message to chat with the AI agent.",
                                                 if let Some(cred) = detect_api_key(&api_key_text) {
                                                     let model = default_model(cred.provider).to_string();
                                                     let effective_base_url = cred.base_url.clone().or_else(|| base_url.clone());
-                                                    let test_config = skyclaw_core::types::config::ProviderConfig {
+                                                    let test_config = temm1e_core::types::config::ProviderConfig {
                                                         name: Some(cred.provider.to_string()),
                                                         api_key: Some(cred.api_key.clone()),
                                                         keys: vec![cred.api_key.clone()],
@@ -3022,7 +3038,7 @@ Just type a message to chat with the AI agent.",
                                                             if let Err(e) = save_credentials(cred.provider, &cred.api_key, &model, cred.base_url.as_deref()).await {
                                                                 tracing::error!(error = %e, "Failed to save credentials from OTK flow");
                                                             }
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 validated_provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -3033,12 +3049,12 @@ Just type a message to chat with the AI agent.",
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
-                                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: format!(
-                                                                    "API key securely received and verified! Configured {} with model {}.\n\nSkyClaw is online.",
+                                                                    "API key securely received and verified! Configured {} with model {}.\n\nTEMM1E is online.",
                                                                     cred.provider, model
                                                                 ),
                                                                 reply_to: Some(msg.id.clone()),
@@ -3048,7 +3064,7 @@ Just type a message to chat with the AI agent.",
                                                             tracing::info!(provider = %cred.provider, "OTK key validated — agent online");
                                                         }
                                                         Err(err) => {
-                                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: format!(
                                                                     "Key decrypted but validation failed — {} returned:\n{}\n\nCheck the key and try /addkey again.",
@@ -3061,7 +3077,7 @@ Just type a message to chat with the AI agent.",
                                                         }
                                                     }
                                                 } else {
-                                                    let reply = skyclaw_core::types::message::OutboundMessage {
+                                                    let reply = temm1e_core::types::message::OutboundMessage {
                                                         chat_id: msg.chat_id.clone(),
                                                         text: "Decrypted successfully but couldn't detect the provider. \
                                                                Make sure you pasted a valid API key in the setup page."
@@ -3073,7 +3089,7 @@ Just type a message to chat with the AI agent.",
                                                 }
                                             }
                                             Err(err) => {
-                                                let reply = skyclaw_core::types::message::OutboundMessage {
+                                                let reply = temm1e_core::types::message::OutboundMessage {
                                                     chat_id: msg.chat_id.clone(),
                                                     text: err,
                                                     reply_to: Some(msg.id.clone()),
@@ -3109,7 +3125,7 @@ Just type a message to chat with the AI agent.",
                                             let effective_base_url = cred.base_url.clone().or_else(|| base_url.clone());
 
                                             // Validate the key BEFORE saving — don't brick the agent
-                                            let test_config = skyclaw_core::types::config::ProviderConfig {
+                                            let test_config = temm1e_core::types::config::ProviderConfig {
                                                 name: Some(cred.provider.to_string()),
                                                 api_key: Some(cred.api_key.clone()),
                                                 keys: vec![cred.api_key.clone()],
@@ -3125,7 +3141,7 @@ Just type a message to chat with the AI agent.",
                                                         tracing::error!(error = %e, "Failed to save new key");
                                                     } else if let Some((name, keys, mdl, saved_base_url)) = load_active_provider_keys() {
                                                         let reload_base_url = saved_base_url.or_else(|| base_url.clone());
-                                                        let reload_config = skyclaw_core::types::config::ProviderConfig {
+                                                        let reload_config = temm1e_core::types::config::ProviderConfig {
                                                             name: Some(name.clone()),
                                                             api_key: keys.first().cloned(),
                                                             keys: keys.clone(),
@@ -3133,8 +3149,8 @@ Just type a message to chat with the AI agent.",
                                                             base_url: reload_base_url,
                                                             extra_headers: std::collections::HashMap::new(),
                                                         };
-                                                        if let Ok(new_provider) = skyclaw_providers::create_provider(&reload_config) {
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                        if let Ok(new_provider) = temm1e_providers::create_provider(&reload_config) {
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 Arc::from(new_provider),
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -3145,10 +3161,10 @@ Just type a message to chat with the AI agent.",
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
                                                             let key_count = keys.len();
-                                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: format!(
                                                                     "Key verified and added for {}! Now using {} key{} with model {}.",
@@ -3170,7 +3186,7 @@ Just type a message to chat with the AI agent.",
                                                 }
                                                 Err(err) => {
                                                     // Key is invalid — DO NOT save, DO NOT switch
-                                                    let reply = skyclaw_core::types::message::OutboundMessage {
+                                                    let reply = temm1e_core::types::message::OutboundMessage {
                                                         chat_id: msg.chat_id.clone(),
                                                         text: format!(
                                                             "Invalid API key — {} returned an error:\n{}\n\nThe current provider is still active. Check the key and try again.",
@@ -3230,7 +3246,7 @@ Just type a message to chat with the AI agent.",
                                             }
                                         }
 
-                                        let mut session = skyclaw_core::types::session::SessionContext {
+                                        let mut session = temm1e_core::types::session::SessionContext {
                                             session_id: format!("{}-{}", msg.channel, msg.chat_id),
                                             user_id: msg.user_id.clone(),
                                             channel: msg.channel.clone(),
@@ -3243,7 +3259,7 @@ Just type a message to chat with the AI agent.",
                                         // When V2 classifies a message as "order", it sends
                                         // an immediate acknowledgment through this channel
                                         // so the user sees a response while the pipeline runs.
-                                        let (early_tx, mut early_rx) = tokio::sync::mpsc::unbounded_channel::<skyclaw_core::types::message::OutboundMessage>();
+                                        let (early_tx, mut early_rx) = tokio::sync::mpsc::unbounded_channel::<temm1e_core::types::message::OutboundMessage>();
                                         let sender_for_early = sender.clone();
                                         tokio::spawn(async move {
                                             while let Some(mut early_msg) = early_rx.recv().await {
@@ -3271,7 +3287,7 @@ Just type a message to chat with the AI agent.",
                                                 send_with_retry(&*sender, reply).await;
 
                                                 // Record usage
-                                                let record = skyclaw_core::UsageRecord {
+                                                let record = temm1e_core::UsageRecord {
                                                     id: uuid::Uuid::new_v4().to_string(),
                                                     chat_id: msg.chat_id.clone(),
                                                     session_id: format!("{}-{}", msg.channel, msg.chat_id),
@@ -3292,7 +3308,7 @@ Just type a message to chat with the AI agent.",
                                                 if turn_usage.api_calls > 0 {
                                                     if let Ok(enabled) = usage_store_worker.is_usage_display_enabled(&msg.chat_id).await {
                                                         if enabled {
-                                                            let usage_msg = skyclaw_core::types::message::OutboundMessage {
+                                                            let usage_msg = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: turn_usage.format_summary(),
                                                                 reply_to: None,
@@ -3306,7 +3322,7 @@ Just type a message to chat with the AI agent.",
                                             Ok(Err(e)) => {
                                                 tracing::error!(error = %e, "Agent processing error");
                                                 let user_msg = format_user_error(&e);
-                                                let error_reply = skyclaw_core::types::message::OutboundMessage {
+                                                let error_reply = temm1e_core::types::message::OutboundMessage {
                                                     chat_id: msg.chat_id.clone(),
                                                     text: censor_secrets(&user_msg),
                                                     reply_to: Some(msg.id.clone()),
@@ -3328,7 +3344,7 @@ Just type a message to chat with the AI agent.",
                                                     panic = %panic_msg,
                                                     "PANIC RECOVERED in message processing — worker continues"
                                                 );
-                                                let error_reply = skyclaw_core::types::message::OutboundMessage {
+                                                let error_reply = temm1e_core::types::message::OutboundMessage {
                                                     chat_id: msg.chat_id.clone(),
                                                     text: "An internal error occurred while processing your message. I've recovered and am ready for your next message.".to_string(),
                                                     reply_to: Some(msg.id.clone()),
@@ -3355,13 +3371,13 @@ Just type a message to chat with the AI agent.",
 
                                         // ── Save conversation history to memory backend ──
                                         if let Ok(json) = serde_json::to_string(&persistent_history) {
-                                            let entry = skyclaw_core::MemoryEntry {
+                                            let entry = temm1e_core::MemoryEntry {
                                                 id: history_key.clone(),
                                                 content: json,
                                                 metadata: serde_json::json!({"chat_id": worker_chat_id}),
                                                 timestamp: chrono::Utc::now(),
                                                 session_id: Some(worker_chat_id.clone()),
-                                                entry_type: skyclaw_core::MemoryEntryType::Conversation,
+                                                entry_type: temm1e_core::MemoryEntryType::Conversation,
                                             };
                                             if let Err(e) = memory.store(entry).await {
                                                 tracing::warn!(
@@ -3393,7 +3409,7 @@ Just type a message to chat with the AI agent.",
                                                         "Credentials changed — validating before hot-reload"
                                                     );
                                                     let effective_base_url = saved_base_url.or_else(|| base_url.clone());
-                                                    let reload_config = skyclaw_core::types::config::ProviderConfig {
+                                                    let reload_config = temm1e_core::types::config::ProviderConfig {
                                                         name: Some(new_name.clone()),
                                                         api_key: valid_keys.first().cloned(),
                                                         keys: valid_keys,
@@ -3403,7 +3419,7 @@ Just type a message to chat with the AI agent.",
                                                     };
                                                     match validate_provider_key(&reload_config).await {
                                                         Ok(validated_provider) => {
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 validated_provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -3414,7 +3430,7 @@ Just type a message to chat with the AI agent.",
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
                                                             tracing::info!(provider = %new_name, model = %new_model, "Agent hot-reloaded (key validated)");
                                                         }
@@ -3453,17 +3469,17 @@ Just type a message to chat with the AI agent.",
                                             let mut new_tools = tools_template.clone();
                                             let mcp_tools = mcp_mgr.bridge_tools(&tool_names).await;
                                             new_tools.extend(mcp_tools);
-                                            new_tools.push(std::sync::Arc::new(skyclaw_mcp::McpManageTool::new(mcp_mgr.clone())));
-                                            new_tools.push(std::sync::Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                            new_tools.push(std::sync::Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
-                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                            new_tools.push(std::sync::Arc::new(temm1e_mcp::McpManageTool::new(mcp_mgr.clone())));
+                                            new_tools.push(std::sync::Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                            new_tools.push(std::sync::Arc::new(temm1e_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
+                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                 agent.provider_arc(),
                                                 memory.clone(),
                                                 new_tools,
                                                 agent.model().to_string(),
                                                 Some(build_system_prompt()),
                                                 max_turns, max_ctx, max_rounds, max_task_duration, max_spend,
-                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                             *agent_state.write().await = Some(new_agent);
                                             tracing::info!("Agent rebuilt with updated MCP tools");
                                         }
@@ -3477,24 +3493,24 @@ Just type a message to chat with the AI agent.",
                                                 tracing::info!(count = custom_tools.len(), "Reloaded custom tools");
                                                 new_tools.extend(custom_tools);
                                             }
-                                            new_tools.push(std::sync::Arc::new(skyclaw_tools::SelfCreateTool::new(custom_registry.clone())));
+                                            new_tools.push(std::sync::Arc::new(temm1e_tools::SelfCreateTool::new(custom_registry.clone())));
                                             #[cfg(feature = "mcp")]
                                             {
                                                 let tool_names: Vec<String> = new_tools.iter().map(|t| t.name().to_string()).collect();
                                                 let mcp_tools = mcp_mgr.bridge_tools(&tool_names).await;
                                                 new_tools.extend(mcp_tools);
-                                                new_tools.push(std::sync::Arc::new(skyclaw_mcp::McpManageTool::new(mcp_mgr.clone())));
-                                                new_tools.push(std::sync::Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                                new_tools.push(std::sync::Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
+                                                new_tools.push(std::sync::Arc::new(temm1e_mcp::McpManageTool::new(mcp_mgr.clone())));
+                                                new_tools.push(std::sync::Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                                new_tools.push(std::sync::Arc::new(temm1e_mcp::SelfAddMcpTool::new(mcp_mgr.clone())));
                                             }
-                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                 agent.provider_arc(),
                                                 memory.clone(),
                                                 new_tools,
                                                 agent.model().to_string(),
                                                 Some(build_system_prompt()),
                                                 max_turns, max_ctx, max_rounds, max_task_duration, max_spend,
-                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                             *agent_state.write().await = Some(new_agent);
                                             tracing::info!("Agent rebuilt with updated custom tools");
                                         }
@@ -3519,7 +3535,7 @@ Just type a message to chat with the AI agent.",
                                                 }
                                             }
                                             let effective_base_url = custom_base_url.clone().or_else(|| base_url.clone());
-                                            let provider_config = skyclaw_core::types::config::ProviderConfig {
+                                            let provider_config = temm1e_core::types::config::ProviderConfig {
                                                 name: Some(provider_name.to_string()),
                                                 api_key: Some(api_key.clone()),
                                                 keys: all_keys,
@@ -3528,13 +3544,13 @@ Just type a message to chat with the AI agent.",
                                                 extra_headers: std::collections::HashMap::new(),
                                             };
 
-                                            match skyclaw_providers::create_provider(&provider_config) {
+                                            match temm1e_providers::create_provider(&provider_config) {
                                                 Ok(_provider) => {
                                                     // Use shared validation (handles auth vs non-auth errors)
                                                     match validate_provider_key(&provider_config).await {
                                                         Ok(validated_provider) => {
                                                             // Key is valid — create agent and go online
-                                                            let new_agent = Arc::new(skyclaw_agent::AgentRuntime::with_limits(
+                                                            let new_agent = Arc::new(temm1e_agent::AgentRuntime::with_limits(
                                                                 validated_provider,
                                                                 memory.clone(),
                                                                 tools_template.clone(),
@@ -3545,7 +3561,7 @@ Just type a message to chat with the AI agent.",
                                                                 max_rounds,
                                                                 max_task_duration,
                                                                 max_spend,
-                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt));
+                                                            ).with_v2_optimizations(v2_opt).with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()));
                                                             *agent_state.write().await = Some(new_agent);
 
                                                             if let Err(e) = save_credentials(provider_name, &api_key, &model, custom_base_url.as_deref()).await {
@@ -3557,10 +3573,10 @@ Just type a message to chat with the AI agent.",
                                                             } else {
                                                                 ""
                                                             };
-                                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: format!(
-                                                                    "API key verified! Configured {}{} with model {}.\n\nSkyClaw is online! You can:\n- Add more keys anytime (just paste them)\n- Use a proxy: \"proxy openai https://your-proxy/v1 your-key\"\n- Change settings in natural language\n\nHow can I help?",
+                                                                    "API key verified! Configured {}{} with model {}.\n\nTEMM1E is online! You can:\n- Add more keys anytime (just paste them)\n- Use a proxy: \"proxy openai https://your-proxy/v1 your-key\"\n- Change settings in natural language\n\nHow can I help?",
                                                                     provider_name, proxy_note, model
                                                                 ),
                                                                 reply_to: Some(msg.id.clone()),
@@ -3571,7 +3587,7 @@ Just type a message to chat with the AI agent.",
                                                         }
                                                         Err(e) => {
                                                             // Key failed auth validation
-                                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                                 chat_id: msg.chat_id.clone(),
                                                                 text: format!(
                                                                     "Invalid API key — the {} API returned an error:\n{}\n\nPlease check your key and paste it again.",
@@ -3586,7 +3602,7 @@ Just type a message to chat with the AI agent.",
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    let reply = skyclaw_core::types::message::OutboundMessage {
+                                                    let reply = temm1e_core::types::message::OutboundMessage {
                                                         chat_id: msg.chat_id.clone(),
                                                         text: format!("Failed to configure provider: {}", e),
                                                         reply_to: Some(msg.id.clone()),
@@ -3600,10 +3616,10 @@ Just type a message to chat with the AI agent.",
                                             let otk = setup_tokens_worker.generate(&msg.chat_id).await;
                                             let otk_hex = hex::encode(otk);
                                             let link = format!(
-                                                "https://nagisanzenin.github.io/skyclaw/setup#{}",
+                                                "https://nagisanzenin.github.io/temm1e/setup#{}",
                                                 otk_hex
                                             );
-                                            let reply = skyclaw_core::types::message::OutboundMessage {
+                                            let reply = temm1e_core::types::message::OutboundMessage {
                                                 chat_id: msg.chat_id.clone(),
                                                 text: onboarding_message_with_link(&link),
                                                 reply_to: Some(msg.id.clone()),
@@ -3612,7 +3628,7 @@ Just type a message to chat with the AI agent.",
                                             send_with_retry(&*sender, reply).await;
 
                                             // Send format reference as separate message for easy copy-paste
-                                            let ref_msg = skyclaw_core::types::message::OutboundMessage {
+                                            let ref_msg = temm1e_core::types::message::OutboundMessage {
                                                 chat_id: msg.chat_id.clone(),
                                                 text: ONBOARDING_REFERENCE.to_string(),
                                                 reply_to: None,
@@ -3652,7 +3668,7 @@ Just type a message to chat with the AI agent.",
                                             "Worker panic caught in outer safety net — recovering"
                                         );
                                         // Best-effort notification to the user
-                                        let error_reply = skyclaw_core::types::message::OutboundMessage {
+                                        let error_reply = temm1e_core::types::message::OutboundMessage {
                                             chat_id: panic_chat_id.clone(),
                                             text: "An internal error occurred. Please try again.".to_string(),
                                             reply_to: Some(panic_msg_id.clone()),
@@ -3705,11 +3721,11 @@ Just type a message to chat with the AI agent.",
             }
 
             // ── Start gateway + block ──────────────────────────
-            println!("SkyClaw gateway starting...");
+            println!("TEMM1E gateway starting...");
             println!("  Mode: {}", cli.mode);
 
             if let Some(agent) = agent_state.read().await.as_ref().cloned() {
-                let gate = skyclaw_gateway::SkyGate::new(channels, agent, config.gateway.clone());
+                let gate = temm1e_gateway::SkyGate::new(channels, agent, config.gateway.clone());
                 task_handles.push(tokio::spawn(async move {
                     if let Err(e) = gate.start().await {
                         tracing::error!(error = %e, "Gateway error");
@@ -3730,7 +3746,7 @@ Just type a message to chat with the AI agent.",
 
             // Block until Ctrl+C, then drain gracefully
             tokio::signal::ctrl_c().await?;
-            println!("\nSkyClaw shutting down gracefully...");
+            println!("\nTEMM1E shutting down gracefully...");
 
             // Drop the inbound message sender so the dispatcher loop exits
             // when its receiver sees the channel closed.
@@ -3750,7 +3766,7 @@ Just type a message to chat with the AI agent.",
             remove_pid_file();
         }
         Commands::Chat => {
-            println!("SkyClaw interactive chat");
+            println!("TEMM1E interactive chat");
             println!("Type '/quit' or '/exit' to quit.\n");
 
             // ── Resolve API credentials ────────────────────────
@@ -3780,68 +3796,71 @@ Just type a message to chat with the AI agent.",
             let memory_url = config.memory.path.clone().unwrap_or_else(|| {
                 let data_dir = dirs::home_dir()
                     .unwrap_or_else(|| std::path::PathBuf::from("."))
-                    .join(".skyclaw");
+                    .join(".temm1e");
                 if let Err(e) = std::fs::create_dir_all(&data_dir) {
                     tracing::warn!(error = %e, path = %data_dir.display(), "Failed to create directory");
                 }
                 format!("sqlite:{}/memory.db?mode=rwc", data_dir.display())
             });
-            let memory: Arc<dyn skyclaw_core::Memory> = Arc::from(
-                skyclaw_memory::create_memory_backend(&config.memory.backend, &memory_url).await?,
+            let memory: Arc<dyn temm1e_core::Memory> = Arc::from(
+                temm1e_memory::create_memory_backend(&config.memory.backend, &memory_url).await?,
             );
 
             // ── CLI channel ────────────────────────────────────
             let workspace = dirs::home_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
-                .join(".skyclaw")
+                .join(".temm1e")
                 .join("workspace");
             if let Err(e) = std::fs::create_dir_all(&workspace) {
                 tracing::warn!(error = %e, path = %workspace.display(), "Failed to create directory");
             }
-            let mut cli_channel = skyclaw_channels::CliChannel::new(workspace.clone());
+            let mut cli_channel = temm1e_channels::CliChannel::new(workspace.clone());
             let cli_rx = cli_channel.take_receiver();
             cli_channel.start().await?;
-            let cli_arc: Arc<dyn skyclaw_core::Channel> = Arc::new(cli_channel);
+            let cli_arc: Arc<dyn temm1e_core::Channel> = Arc::new(cli_channel);
 
             // ── OTK state ──────────────────────────────────────
-            let setup_tokens = skyclaw_gateway::SetupTokenStore::new();
+            let setup_tokens = temm1e_gateway::SetupTokenStore::new();
 
             // ── Usage store ──────────────────────────────────────
-            let usage_store: Arc<dyn skyclaw_core::UsageStore> =
-                Arc::new(skyclaw_memory::SqliteUsageStore::new(&memory_url).await?);
+            let usage_store: Arc<dyn temm1e_core::UsageStore> =
+                Arc::new(temm1e_memory::SqliteUsageStore::new(&memory_url).await?);
 
             // ── Tools ──────────────────────────────────────────
-            let pending_messages: skyclaw_tools::PendingMessages =
+            let pending_messages: temm1e_tools::PendingMessages =
                 Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()));
             let censored_cli: Arc<dyn Channel> = Arc::new(SecretCensorChannel {
                 inner: cli_arc.clone(),
             });
-            let mut tools_template = skyclaw_tools::create_tools(
+            let shared_mode: temm1e_tools::SharedMode =
+                Arc::new(tokio::sync::RwLock::new(config.mode));
+            let mut tools_template = temm1e_tools::create_tools(
                 &config.tools,
                 Some(censored_cli),
                 Some(pending_messages.clone()),
                 Some(memory.clone()),
-                Some(Arc::new(setup_tokens.clone()) as Arc<dyn skyclaw_core::SetupLinkGenerator>),
+                Some(Arc::new(setup_tokens.clone()) as Arc<dyn temm1e_core::SetupLinkGenerator>),
                 Some(usage_store.clone()),
+                Some(shared_mode.clone()),
             );
 
             // ── Custom script tools (user/agent-authored) ──────
-            let custom_tool_registry = Arc::new(skyclaw_tools::CustomToolRegistry::new());
+            let custom_tool_registry = Arc::new(temm1e_tools::CustomToolRegistry::new());
             {
                 let custom_tools = custom_tool_registry.load_tools();
                 if !custom_tools.is_empty() {
                     tracing::info!(count = custom_tools.len(), "Custom script tools loaded");
                     tools_template.extend(custom_tools);
                 }
-                tools_template.push(Arc::new(skyclaw_tools::SelfCreateTool::new(
+                tools_template.push(Arc::new(temm1e_tools::SelfCreateTool::new(
                     custom_tool_registry.clone(),
                 )));
             }
 
             // ── MCP servers (external tool sources) ──────────
             #[cfg(feature = "mcp")]
-            let mcp_manager: Arc<skyclaw_mcp::McpManager> = {
-                let mgr = Arc::new(skyclaw_mcp::McpManager::new());
+            let mcp_manager: Arc<temm1e_mcp::McpManager> = {
+                let mgr = Arc::new(temm1e_mcp::McpManager::new());
                 mgr.connect_all().await;
                 let tool_names: Vec<String> = tools_template
                     .iter()
@@ -3852,9 +3871,9 @@ Just type a message to chat with the AI agent.",
                     tracing::info!(count = mcp_tools.len(), "MCP bridge tools loaded");
                     tools_template.extend(mcp_tools);
                 }
-                tools_template.push(Arc::new(skyclaw_mcp::McpManageTool::new(mgr.clone())));
-                tools_template.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                tools_template.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(mgr.clone())));
+                tools_template.push(Arc::new(temm1e_mcp::McpManageTool::new(mgr.clone())));
+                tools_template.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                tools_template.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(mgr.clone())));
                 mgr
             };
 
@@ -3869,7 +3888,7 @@ Just type a message to chat with the AI agent.",
             let v2_opt = config.agent.v2_optimizations;
             let pp_opt = config.agent.parallel_phases;
 
-            let mut agent_opt: Option<skyclaw_agent::AgentRuntime> = None;
+            let mut agent_opt: Option<temm1e_agent::AgentRuntime> = None;
 
             if let Some((pname, key, model)) = credentials {
                 if !is_placeholder_key(&key) {
@@ -3884,7 +3903,7 @@ Just type a message to chat with the AI agent.",
                         .unwrap_or_else(|| (vec![key.clone()], None));
                     let effective_base_url =
                         saved_base_url.or_else(|| config.provider.base_url.clone());
-                    let provider_config = skyclaw_core::types::config::ProviderConfig {
+                    let provider_config = temm1e_core::types::config::ProviderConfig {
                         name: Some(pname.clone()),
                         api_key: Some(key.clone()),
                         keys: all_keys,
@@ -3893,30 +3912,30 @@ Just type a message to chat with the AI agent.",
                         extra_headers: config.provider.extra_headers.clone(),
                     };
                     // Create provider — route to Codex OAuth if configured
-                    let provider_result: Result<Arc<dyn skyclaw_core::Provider>, String> = {
+                    let provider_result: Result<Arc<dyn temm1e_core::Provider>, String> = {
                         #[cfg(feature = "codex-oauth")]
                         if pname == "openai-codex" {
-                            match skyclaw_codex_oauth::TokenStore::load() {
+                            match temm1e_codex_oauth::TokenStore::load() {
                                 Ok(store) => Ok(Arc::new(
-                                    skyclaw_codex_oauth::CodexResponsesProvider::new(
+                                    temm1e_codex_oauth::CodexResponsesProvider::new(
                                         model.clone(),
                                         std::sync::Arc::new(store),
                                     ),
                                 )),
                                 Err(e) => Err(format!(
-                                    "Codex OAuth not configured: {}. Run `skyclaw auth login` first.",
+                                    "Codex OAuth not configured: {}. Run `temm1e auth login` first.",
                                     e
                                 )),
                             }
                         } else {
-                            skyclaw_providers::create_provider(&provider_config)
-                                .map(|p| Arc::from(p) as Arc<dyn skyclaw_core::Provider>)
+                            temm1e_providers::create_provider(&provider_config)
+                                .map(|p| Arc::from(p) as Arc<dyn temm1e_core::Provider>)
                                 .map_err(|e| e.to_string())
                         }
                         #[cfg(not(feature = "codex-oauth"))]
                         {
-                            skyclaw_providers::create_provider(&provider_config)
-                                .map(|p| Arc::from(p) as Arc<dyn skyclaw_core::Provider>)
+                            temm1e_providers::create_provider(&provider_config)
+                                .map(|p| Arc::from(p) as Arc<dyn temm1e_core::Provider>)
                                 .map_err(|e| e.to_string())
                         }
                     };
@@ -3924,7 +3943,7 @@ Just type a message to chat with the AI agent.",
                         Ok(provider) => {
                             let system_prompt = Some(build_system_prompt());
                             agent_opt = Some(
-                                skyclaw_agent::AgentRuntime::with_limits(
+                                temm1e_agent::AgentRuntime::with_limits(
                                     provider,
                                     memory.clone(),
                                     tools_template.clone(),
@@ -3937,7 +3956,7 @@ Just type a message to chat with the AI agent.",
                                     max_spend,
                                 )
                                 .with_v2_optimizations(v2_opt)
-                                .with_parallel_phases(pp_opt),
+                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                             );
                             println!("Connected to {} (model: {})", pname, model);
                             if max_spend > 0.0 {
@@ -3957,20 +3976,20 @@ Just type a message to chat with the AI agent.",
                 // Check if Codex OAuth tokens exist — use those instead of API key
                 #[cfg(feature = "codex-oauth")]
                 {
-                    if skyclaw_codex_oauth::TokenStore::exists() {
+                    if temm1e_codex_oauth::TokenStore::exists() {
                         // Always use Codex-compatible model — config model is for API key provider
                         let model = "gpt-5.4".to_string();
-                        match skyclaw_codex_oauth::TokenStore::load() {
+                        match temm1e_codex_oauth::TokenStore::load() {
                             Ok(store) => {
                                 let token_store = std::sync::Arc::new(store);
-                                let provider: Arc<dyn skyclaw_core::Provider> =
-                                    Arc::new(skyclaw_codex_oauth::CodexResponsesProvider::new(
+                                let provider: Arc<dyn temm1e_core::Provider> =
+                                    Arc::new(temm1e_codex_oauth::CodexResponsesProvider::new(
                                         model.clone(),
                                         token_store,
                                     ));
                                 let system_prompt = Some(build_system_prompt());
                                 agent_opt = Some(
-                                    skyclaw_agent::AgentRuntime::with_limits(
+                                    temm1e_agent::AgentRuntime::with_limits(
                                         provider,
                                         memory.clone(),
                                         tools_template.clone(),
@@ -3983,7 +4002,7 @@ Just type a message to chat with the AI agent.",
                                         max_spend,
                                     )
                                     .with_v2_optimizations(v2_opt)
-                                    .with_parallel_phases(pp_opt),
+                                    .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                                 );
                                 println!(
                                     "Connected to openai-codex via Codex OAuth (model: {})",
@@ -4002,7 +4021,7 @@ Just type a message to chat with the AI agent.",
                 // Auto-generate OTK and show setup link immediately
                 let otk = setup_tokens.generate("cli").await;
                 let otk_hex = hex::encode(otk);
-                let link = format!("https://nagisanzenin.github.io/skyclaw/setup#{}", otk_hex);
+                let link = format!("https://nagisanzenin.github.io/temm1e/setup#{}", otk_hex);
                 println!("\n{}", onboarding_message_with_link(&link));
                 println!("\n{}", ONBOARDING_REFERENCE);
             }
@@ -4015,11 +4034,11 @@ Just type a message to chat with the AI agent.",
             };
             // ── Restore CLI conversation history from memory backend ──
             let cli_history_key = "chat_history:cli".to_string();
-            let mut history: Vec<skyclaw_core::types::message::ChatMessage> =
+            let mut history: Vec<temm1e_core::types::message::ChatMessage> =
                 match memory.get(&cli_history_key).await {
                     Ok(Some(entry)) => match serde_json::from_str(&entry.content) {
                         Ok(h) => {
-                            let count = Vec::<skyclaw_core::types::message::ChatMessage>::len(&h);
+                            let count = Vec::<temm1e_core::types::message::ChatMessage>::len(&h);
                             if count > 0 {
                                 println!("  Restored {} messages from previous session.", count);
                             }
@@ -4039,7 +4058,7 @@ Just type a message to chat with the AI agent.",
                 if cmd_lower == "/addkey" {
                     let otk = setup_tokens.generate(&msg.chat_id).await;
                     let otk_hex = hex::encode(otk);
-                    let link = format!("https://nagisanzenin.github.io/skyclaw/setup#{}", otk_hex);
+                    let link = format!("https://nagisanzenin.github.io/temm1e/setup#{}", otk_hex);
                     println!(
                         "\nSecure key setup:\n\n\
                          1. Open this link:\n{}\n\n\
@@ -4050,7 +4069,7 @@ Just type a message to chat with the AI agent.",
                          For a quick (less secure) method: /addkey unsafe\n",
                         link
                     );
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4059,14 +4078,14 @@ Just type a message to chat with the AI agent.",
                     println!("\nPaste your API key below.");
                     println!("Warning: the key will be visible in terminal history.");
                     println!("For a secure method, use /addkey instead.\n");
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
                 // /keys
                 if cmd_lower == "/keys" {
                     println!("\n{}\n", list_configured_providers());
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4078,7 +4097,7 @@ Just type a message to chat with the AI agent.",
                         agent_opt = None;
                         println!("All providers removed — agent offline.\n");
                     }
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4103,14 +4122,14 @@ Just type a message to chat with the AI agent.",
                         }
                         Err(e) => eprintln!("Failed to query usage: {}", e),
                     }
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
                 // /help — list available commands
                 if cmd_lower == "/help" {
                     println!(
-                        "\nskyclaw {} — commit: {} — date: {}\n\n\
+                        "\ntemm1e {} — commit: {} — date: {}\n\n\
                          Available commands:\n\n\
                          /help — Show this help message\n\
                          /addkey — Securely add an API key (encrypted OTK flow)\n\
@@ -4130,7 +4149,7 @@ Just type a message to chat with the AI agent.",
                         env!("GIT_HASH"),
                         env!("BUILD_DATE"),
                     );
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4177,13 +4196,13 @@ Just type a message to chat with the AI agent.",
                                 let config = if target.starts_with("http://")
                                     || target.starts_with("https://")
                                 {
-                                    skyclaw_mcp::McpServerConfig::http(name, target)
+                                    temm1e_mcp::McpServerConfig::http(name, target)
                                 } else {
                                     let cmd_parts: Vec<&str> = target.split_whitespace().collect();
                                     let command = cmd_parts[0];
                                     let args: Vec<String> =
                                         cmd_parts[1..].iter().map(|s| s.to_string()).collect();
-                                    skyclaw_mcp::McpServerConfig::stdio(name, command, args)
+                                    temm1e_mcp::McpServerConfig::stdio(name, command, args)
                                 };
                                 match mcp_manager.add_server(config).await {
                                     Ok(count) => {
@@ -4197,19 +4216,19 @@ Just type a message to chat with the AI agent.",
                                                 mcp_manager.bridge_tools(&tool_names).await;
                                             new_tools.extend(mcp_tools);
                                             new_tools.push(Arc::new(
-                                                skyclaw_mcp::McpManageTool::new(
+                                                temm1e_mcp::McpManageTool::new(
                                                     mcp_manager.clone(),
                                                 ),
                                             ));
                                             new_tools
-                                                .push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
+                                                .push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
                                             new_tools.push(Arc::new(
-                                                skyclaw_mcp::SelfAddMcpTool::new(
+                                                temm1e_mcp::SelfAddMcpTool::new(
                                                     mcp_manager.clone(),
                                                 ),
                                             ));
                                             agent_opt = Some(
-                                                skyclaw_agent::AgentRuntime::with_limits(
+                                                temm1e_agent::AgentRuntime::with_limits(
                                                     agent.provider_arc(),
                                                     memory.clone(),
                                                     new_tools,
@@ -4222,7 +4241,7 @@ Just type a message to chat with the AI agent.",
                                                     max_spend,
                                                 )
                                                 .with_v2_optimizations(v2_opt)
-                                                .with_parallel_phases(pp_opt),
+                                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                                             );
                                         }
                                         mcp_manager.take_tools_changed();
@@ -4247,15 +4266,15 @@ Just type a message to chat with the AI agent.",
                                     let mut new_tools = tools_template.clone();
                                     let mcp_tools = mcp_manager.bridge_tools(&tool_names).await;
                                     new_tools.extend(mcp_tools);
-                                    new_tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(
+                                    new_tools.push(Arc::new(temm1e_mcp::McpManageTool::new(
                                         mcp_manager.clone(),
                                     )));
-                                    new_tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                    new_tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(
+                                    new_tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                    new_tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(
                                         mcp_manager.clone(),
                                     )));
                                     agent_opt = Some(
-                                        skyclaw_agent::AgentRuntime::with_limits(
+                                        temm1e_agent::AgentRuntime::with_limits(
                                             agent.provider_arc(),
                                             memory.clone(),
                                             new_tools,
@@ -4268,7 +4287,7 @@ Just type a message to chat with the AI agent.",
                                             max_spend,
                                         )
                                         .with_v2_optimizations(v2_opt)
-                                        .with_parallel_phases(pp_opt),
+                                        .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                                     );
                                 }
                                 mcp_manager.take_tools_changed();
@@ -4288,15 +4307,15 @@ Just type a message to chat with the AI agent.",
                                     let mut new_tools = tools_template.clone();
                                     let mcp_tools = mcp_manager.bridge_tools(&tool_names).await;
                                     new_tools.extend(mcp_tools);
-                                    new_tools.push(Arc::new(skyclaw_mcp::McpManageTool::new(
+                                    new_tools.push(Arc::new(temm1e_mcp::McpManageTool::new(
                                         mcp_manager.clone(),
                                     )));
-                                    new_tools.push(Arc::new(skyclaw_mcp::SelfExtendTool::new()));
-                                    new_tools.push(Arc::new(skyclaw_mcp::SelfAddMcpTool::new(
+                                    new_tools.push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
+                                    new_tools.push(Arc::new(temm1e_mcp::SelfAddMcpTool::new(
                                         mcp_manager.clone(),
                                     )));
                                     agent_opt = Some(
-                                        skyclaw_agent::AgentRuntime::with_limits(
+                                        temm1e_agent::AgentRuntime::with_limits(
                                             agent.provider_arc(),
                                             memory.clone(),
                                             new_tools,
@@ -4309,7 +4328,7 @@ Just type a message to chat with the AI agent.",
                                             max_spend,
                                         )
                                         .with_v2_optimizations(v2_opt)
-                                        .with_parallel_phases(pp_opt),
+                                        .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                                     );
                                 }
                                 mcp_manager.take_tools_changed();
@@ -4333,15 +4352,15 @@ Just type a message to chat with the AI agent.",
                              /mcp add myapi https://mcp.example.com/sse\n"
                         );
                     }
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
                 // /restart — not applicable in CLI mode
                 if cmd_lower == "/restart" {
-                    println!("\n/restart is only available in server mode (skyclaw start).");
-                    println!("In CLI mode, just exit and re-run: skyclaw chat\n");
-                    eprint!("skyclaw> ");
+                    println!("\n/restart is only available in server mode (temm1e start).");
+                    println!("In CLI mode, just exit and re-run: temm1e chat\n");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4354,7 +4373,7 @@ Just type a message to chat with the AI agent.",
                                 let model = default_model(cred.provider).to_string();
                                 let effective_base_url =
                                     cred.base_url.clone().or_else(|| base_url.clone());
-                                let test_config = skyclaw_core::types::config::ProviderConfig {
+                                let test_config = temm1e_core::types::config::ProviderConfig {
                                     name: Some(cred.provider.to_string()),
                                     api_key: Some(cred.api_key.clone()),
                                     keys: vec![cred.api_key.clone()],
@@ -4376,7 +4395,7 @@ Just type a message to chat with the AI agent.",
                                         }
                                         let system_prompt = Some(build_system_prompt());
                                         agent_opt = Some(
-                                            skyclaw_agent::AgentRuntime::with_limits(
+                                            temm1e_agent::AgentRuntime::with_limits(
                                                 validated_provider,
                                                 memory.clone(),
                                                 tools_template.clone(),
@@ -4389,13 +4408,13 @@ Just type a message to chat with the AI agent.",
                                                 max_spend,
                                             )
                                             .with_v2_optimizations(v2_opt)
-                                            .with_parallel_phases(pp_opt),
+                                            .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                                         );
                                         println!(
                                             "\nAPI key securely received and verified! Configured {} with model {}.",
                                             cred.provider, model
                                         );
-                                        println!("SkyClaw is online.\n");
+                                        println!("TEMM1E is online.\n");
                                     }
                                     Err(err) => {
                                         eprintln!(
@@ -4414,7 +4433,7 @@ Just type a message to chat with the AI agent.",
                             eprintln!("\n{}\n", err);
                         }
                     }
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
@@ -4422,7 +4441,7 @@ Just type a message to chat with the AI agent.",
                 if let Some(cred) = detect_api_key(msg_text) {
                     let model = default_model(cred.provider).to_string();
                     let effective_base_url = cred.base_url.clone().or_else(|| base_url.clone());
-                    let test_config = skyclaw_core::types::config::ProviderConfig {
+                    let test_config = temm1e_core::types::config::ProviderConfig {
                         name: Some(cred.provider.to_string()),
                         api_key: Some(cred.api_key.clone()),
                         keys: vec![cred.api_key.clone()],
@@ -4444,7 +4463,7 @@ Just type a message to chat with the AI agent.",
                             }
                             let system_prompt = Some(build_system_prompt());
                             agent_opt = Some(
-                                skyclaw_agent::AgentRuntime::with_limits(
+                                temm1e_agent::AgentRuntime::with_limits(
                                     validated_provider,
                                     memory.clone(),
                                     tools_template.clone(),
@@ -4457,13 +4476,13 @@ Just type a message to chat with the AI agent.",
                                     max_spend,
                                 )
                                 .with_v2_optimizations(v2_opt)
-                                .with_parallel_phases(pp_opt),
+                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
                             );
                             println!(
                                 "\nAPI key verified! Configured {} with model {}.",
                                 cred.provider, model
                             );
-                            println!("SkyClaw is online.\n");
+                            println!("TEMM1E is online.\n");
                         }
                         Err(err) => {
                             eprintln!(
@@ -4472,13 +4491,13 @@ Just type a message to chat with the AI agent.",
                             );
                         }
                     }
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                     continue;
                 }
 
                 // ── Normal agent processing ────────────────────
                 if let Some(ref agent) = agent_opt {
-                    let mut session = skyclaw_core::types::session::SessionContext {
+                    let mut session = temm1e_core::types::session::SessionContext {
                         session_id: "cli-cli".to_string(),
                         user_id: msg.user_id.clone(),
                         channel: msg.channel.clone(),
@@ -4489,7 +4508,7 @@ Just type a message to chat with the AI agent.",
 
                     // Early reply channel for LLM classifier (order acknowledgments)
                     let (early_tx, mut early_rx) = tokio::sync::mpsc::unbounded_channel::<
-                        skyclaw_core::types::message::OutboundMessage,
+                        temm1e_core::types::message::OutboundMessage,
                     >();
                     let cli_for_early = cli_arc.clone();
                     tokio::spawn(async move {
@@ -4517,7 +4536,7 @@ Just type a message to chat with the AI agent.",
                             cli_arc.send_message(reply).await.ok();
 
                             // Record usage
-                            let record = skyclaw_core::UsageRecord {
+                            let record = temm1e_core::UsageRecord {
                                 id: uuid::Uuid::new_v4().to_string(),
                                 chat_id: msg.chat_id.clone(),
                                 session_id: "cli-cli".to_string(),
@@ -4548,7 +4567,7 @@ Just type a message to chat with the AI agent.",
                         Ok(Err(e)) => {
                             tracing::error!(error = %e, "CLI agent processing error");
                             eprintln!("  [{}]", format_user_error(&e));
-                            eprint!("skyclaw> ");
+                            eprint!("temm1e> ");
                         }
                         Err(panic_info) => {
                             let panic_msg = if let Some(s) = panic_info.downcast_ref::<String>() {
@@ -4569,13 +4588,13 @@ Just type a message to chat with the AI agent.",
 
                     // ── Save CLI conversation history to memory backend ──
                     if let Ok(json) = serde_json::to_string(&history) {
-                        let entry = skyclaw_core::MemoryEntry {
+                        let entry = temm1e_core::MemoryEntry {
                             id: cli_history_key.clone(),
                             content: json,
                             metadata: serde_json::json!({"chat_id": "cli"}),
                             timestamp: chrono::Utc::now(),
                             session_id: Some("cli".to_string()),
-                            entry_type: skyclaw_core::MemoryEntryType::Conversation,
+                            entry_type: temm1e_core::MemoryEntryType::Conversation,
                         };
                         if let Err(e) = memory.store(entry).await {
                             tracing::warn!(error = %e, "Failed to persist CLI conversation history");
@@ -4585,18 +4604,18 @@ Just type a message to chat with the AI agent.",
                     // Auto-generate fresh OTK for onboarding
                     let otk = setup_tokens.generate("cli").await;
                     let otk_hex = hex::encode(otk);
-                    let link = format!("https://nagisanzenin.github.io/skyclaw/setup#{}", otk_hex);
+                    let link = format!("https://nagisanzenin.github.io/temm1e/setup#{}", otk_hex);
                     println!("\n{}", onboarding_message_with_link(&link));
                     println!("\n{}\n", ONBOARDING_REFERENCE);
-                    eprint!("skyclaw> ");
+                    eprint!("temm1e> ");
                 }
             }
 
-            println!("\nSkyClaw chat ended.");
+            println!("\nTEMM1E chat ended.");
         }
         Commands::Status => {
-            println!("SkyClaw Status");
-            println!("  Mode: {}", config.skyclaw.mode);
+            println!("TEMM1E Status");
+            println!("  Mode: {}", config.temm1e.mode);
             println!("  Gateway: {}:{}", config.gateway.host, config.gateway.port);
             println!(
                 "  Provider: {}",
@@ -4633,7 +4652,7 @@ Just type a message to chat with the AI agent.",
             }
         },
         Commands::Update => {
-            println!("SkyClaw Update");
+            println!("TEMM1E Update");
             println!("Current version: {}\n", env!("CARGO_PKG_VERSION"));
 
             // 1. Check if we're in a git repo
@@ -4643,7 +4662,7 @@ Just type a message to chat with the AI agent.",
             match git_check {
                 Ok(out) if out.status.success() => {}
                 _ => {
-                    eprintln!("Error: Not a git repository. Run `skyclaw update` from the cloned repo directory.");
+                    eprintln!("Error: Not a git repository. Run `temm1e update` from the cloned repo directory.");
                     std::process::exit(1);
                 }
             }
@@ -4715,7 +4734,7 @@ Just type a message to chat with the AI agent.",
             if !status.trim().is_empty() {
                 eprintln!("Warning: You have uncommitted changes. Stashing before update...");
                 let stash = std::process::Command::new("git")
-                    .args(["stash", "push", "-m", "skyclaw-update-autostash"])
+                    .args(["stash", "push", "-m", "temm1e-update-autostash"])
                     .output();
                 if stash.map_or(true, |o| !o.status.success()) {
                     eprintln!("Error: Failed to stash changes. Commit or stash manually first.");
@@ -4750,17 +4769,17 @@ Just type a message to chat with the AI agent.",
             // 7. Build release binary
             println!("Building release binary... (this may take a few minutes)");
             let build = std::process::Command::new("cargo")
-                .args(["build", "--release", "--bin", "skyclaw"])
+                .args(["build", "--release", "--bin", "temm1e"])
                 .status();
             match build {
                 Ok(s) if s.success() => {
                     println!("\nUpdate complete!");
-                    println!("Restart with: skyclaw start");
+                    println!("Restart with: temm1e start");
                 }
                 Ok(s) => {
                     eprintln!("\nBuild failed with exit code: {:?}", s.code());
                     eprintln!("The source was updated but the binary was not rebuilt.");
-                    eprintln!("Run `cargo build --release --bin skyclaw` manually to retry.");
+                    eprintln!("Run `cargo build --release --bin temm1e` manually to retry.");
                     std::process::exit(1);
                 }
                 Err(e) => {
@@ -4776,7 +4795,7 @@ Just type a message to chat with the AI agent.",
                 .output()
                 .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
                 .unwrap_or_default();
-            if stash_list.contains("skyclaw-update-autostash") {
+            if stash_list.contains("temm1e-update-autostash") {
                 println!("Restoring stashed changes...");
                 let _ = std::process::Command::new("git")
                     .args(["stash", "pop"])
@@ -4785,7 +4804,7 @@ Just type a message to chat with the AI agent.",
         }
         Commands::Version => {
             println!(
-                "skyclaw {} — commit: {} — date: {}",
+                "temm1e {} — commit: {} — date: {}",
                 env!("CARGO_PKG_VERSION"),
                 env!("GIT_HASH"),
                 env!("BUILD_DATE")
@@ -4795,10 +4814,10 @@ Just type a message to chat with the AI agent.",
         #[cfg(feature = "codex-oauth")]
         Commands::Auth { command } => match command {
             AuthCommands::Login { headless, output } => {
-                println!("SkyClaw — OpenAI Codex OAuth Login");
+                println!("TEMM1E — OpenAI Codex OAuth Login");
                 println!("Authenticating with your ChatGPT subscription...\n");
 
-                match skyclaw_codex_oauth::login(headless).await {
+                match temm1e_codex_oauth::login(headless).await {
                     Ok(store) => {
                         let email = store.email().await;
                         let expires = store.expires_in().await;
@@ -4824,7 +4843,7 @@ Just type a message to chat with the AI agent.",
                             println!("  Exported: {}", path.display());
                         }
 
-                        println!("\n  Run `skyclaw start` to go online.");
+                        println!("\n  Run `temm1e start` to go online.");
                     }
                     Err(e) => {
                         eprintln!("Authentication failed: {}", e);
@@ -4833,17 +4852,17 @@ Just type a message to chat with the AI agent.",
                 }
             }
             AuthCommands::Status => {
-                if !skyclaw_codex_oauth::TokenStore::exists() {
-                    println!("Not authenticated. Run `skyclaw auth login` to connect your ChatGPT account.");
+                if !temm1e_codex_oauth::TokenStore::exists() {
+                    println!("Not authenticated. Run `temm1e auth login` to connect your ChatGPT account.");
                     return Ok(());
                 }
-                match skyclaw_codex_oauth::TokenStore::load() {
+                match temm1e_codex_oauth::TokenStore::load() {
                     Ok(store) => {
                         let email = store.email().await;
                         let account = store.account_id().await;
                         let expires = store.expires_in().await;
                         let expired = store.is_expired().await;
-                        println!("SkyClaw — Codex OAuth Status");
+                        println!("TEMM1E — Codex OAuth Status");
                         println!("  Email:      {}", email);
                         println!("  Account:    {}", account);
                         println!(
@@ -4857,7 +4876,7 @@ Just type a message to chat with the AI agent.",
                     }
                 }
             }
-            AuthCommands::Logout => match skyclaw_codex_oauth::TokenStore::delete() {
+            AuthCommands::Logout => match temm1e_codex_oauth::TokenStore::delete() {
                 Ok(()) => {
                     println!("Logged out. OAuth tokens removed.");
                 }
@@ -5111,7 +5130,7 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
 
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let otk = store.generate("test-chat").await;
 
         // Simulate browser-side encryption
@@ -5145,7 +5164,7 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
 
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let otk = store.generate("chat-a").await;
 
         let api_key = "sk-ant-api03-testkey123456789";
@@ -5173,7 +5192,7 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
 
-        let store = skyclaw_gateway::SetupTokenStore::with_ttl(std::time::Duration::from_millis(1));
+        let store = temm1e_gateway::SetupTokenStore::with_ttl(std::time::Duration::from_millis(1));
         let otk = store.generate("chat-expire").await;
 
         let api_key = "sk-ant-api03-testkey123456789";
@@ -5199,7 +5218,7 @@ mod tests {
 
     #[tokio::test]
     async fn otk_decrypt_tampered_blob_fails() {
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let _otk = store.generate("chat-tamper").await;
 
         // Tampered blob — valid base64 but wrong ciphertext
@@ -5212,7 +5231,7 @@ mod tests {
 
     #[tokio::test]
     async fn otk_decrypt_invalid_base64_fails() {
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let _otk = store.generate("chat-b64").await;
 
         let result = decrypt_otk_blob("not!valid!base64!!!", &store, "chat-b64").await;
@@ -5222,7 +5241,7 @@ mod tests {
 
     #[tokio::test]
     async fn otk_decrypt_too_short_blob_fails() {
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let _otk = store.generate("chat-short").await;
 
         let short_blob = base64::engine::general_purpose::STANDARD.encode([0u8; 10]);
@@ -5309,7 +5328,7 @@ mod tests {
         use aes_gcm::aead::{Aead, KeyInit};
         use aes_gcm::{Aes256Gcm, Key, Nonce};
 
-        let store = skyclaw_gateway::SetupTokenStore::new();
+        let store = temm1e_gateway::SetupTokenStore::new();
         let otk = store.generate("e2e-chat").await;
 
         // Step 1: Server encodes OTK as hex (what goes into the URL fragment)

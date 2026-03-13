@@ -1,6 +1,6 @@
-# SkyClaw v2.0 — Smarter Agentic Core
+# TEMM1E v2.0 — Smarter Agentic Core
 
-SkyClaw v2.0 introduces a smarter agentic core that understands **what kind of task you're asking** before it starts working. The result: fewer unnecessary API calls, lower costs on complex tasks, and the same response quality you're used to.
+TEMM1E v2.0 introduces a smarter agentic core that understands **what kind of task you're asking** before it starts working. The result: fewer unnecessary API calls, lower costs on complex tasks, and the same response quality you're used to.
 
 ---
 
@@ -91,14 +91,14 @@ Terminal logs: [v1](benchmark_v2_tools_v1_log.txt) | [v2](benchmark_v2_tools_v2_
 
 ## Configuration
 
-v2 is opt-in. Add to your `skyclaw.toml`:
+v2 is opt-in. Add to your `temm1e.toml`:
 
 ```toml
 [agent]
 v2_optimizations = true
 ```
 
-When `false` or absent, SkyClaw behaves exactly like v1. No migration needed, no breaking changes.
+When `false` or absent, TEMM1E behaves exactly like v1. No migration needed, no breaking changes.
 
 ---
 
@@ -111,4 +111,4 @@ When `false` or absent, SkyClaw behaves exactly like v1. No migration needed, no
 
 ---
 
-*SkyClaw v2.0 — same intelligence, less waste.*
+*TEMM1E v2.0 — same intelligence, less waste.*

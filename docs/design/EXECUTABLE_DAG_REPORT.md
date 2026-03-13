@@ -153,7 +153,7 @@ Two identical 10-turn tests with multi-phase, parallel-nature questions:
 
 ### Test Questions (designed for multi-phase/parallel behavior)
 
-1. "What model are you running on and what version of SkyClaw?"
+1. "What model are you running on and what version of TEMM1E?"
 2. "Do two things at once: calculate 37*19+42, and write a haiku about cloud computing"
 3. "Plan a 3-phase deployment: build Docker image, run tests, deploy to staging"
 4. "Step-by-step monitoring setup: Phase 1 Prometheus, Phase 2 Grafana (independent), Phase 3 alerting (depends on both)"
@@ -311,7 +311,7 @@ If ANY condition is false → falls through to existing behavior unchanged.
 
 ## 8. File-by-File Changes
 
-### `crates/skyclaw-agent/src/blueprint.rs` (+513 lines)
+### `crates/temm1e-agent/src/blueprint.rs` (+513 lines)
 
 New types and functions:
 - `BlueprintPhase` struct — typed phase with id, name, goal, body, depends_on
@@ -325,7 +325,7 @@ New types and functions:
 - Updated `build_authoring_prompt()` with parallel annotation instructions
 - 16 new unit tests
 
-### `crates/skyclaw-agent/src/runtime.rs` (+216 lines)
+### `crates/temm1e-agent/src/runtime.rs` (+216 lines)
 
 - `parallel_phases: bool` field on `AgentRuntime` (both constructors)
 - `with_parallel_phases(mut self, enabled: bool) -> Self` builder
@@ -339,13 +339,13 @@ New types and functions:
   - Result aggregation in phase order
   - Duration limit check
 
-### `crates/skyclaw-core/src/types/config.rs` (+7 lines)
+### `crates/temm1e-core/src/types/config.rs` (+7 lines)
 
 - `parallel_phases: bool` added to `AgentConfig`
 - `#[serde(default)]` — defaults to `false`
 - Added to `Default` impl
 
-### `crates/skyclaw-agent/src/lib.rs` (+2 lines)
+### `crates/temm1e-agent/src/lib.rs` (+2 lines)
 
 - `BlueprintPhase` added to public exports
 
@@ -365,7 +365,7 @@ New types and functions:
 
 ## 9. How to Enable
 
-Add to `skyclaw.toml`:
+Add to `temm1e.toml`:
 
 ```toml
 [agent]

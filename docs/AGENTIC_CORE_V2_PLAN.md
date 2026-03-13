@@ -1,9 +1,9 @@
-# SkyClaw Agentic Core v2.0 — Implementation Plan
+# TEMM1E Agentic Core v2.0 — Implementation Plan
 
 **Author:** Tung + Claude (harmonized from RFC + codebase analysis + Claude Code ecosystem research)
 **Date:** 2026-03-10
 **Status:** Approved Plan — No Code Yet
-**Scope:** `skyclaw-agent`, `skyclaw-core`, `skyclaw-tools`, `skyclaw-memory`, `skyclaw-skills`, `skyclaw-channels`
+**Scope:** `temm1e-agent`, `temm1e-core`, `temm1e-tools`, `temm1e-memory`, `temm1e-skills`, `temm1e-channels`
 
 ---
 
@@ -15,7 +15,7 @@ Every optimization must pass this test: "Does the user notice any degradation?" 
 
 ### Goal 2: Resilience — Zero Dead-Ends, Zero Silent Failures
 
-The agentic core must be self-sustaining. Every failure path must have a recovery path. No operation can leave the system in an unrecoverable state. If something fails, the user gets told, the system recovers, and the next message works. This extends SkyClaw's existing 4-layer resilience architecture (source elimination, catch_unwind, dead worker detection, global panic hook) into the agentic decision layer.
+The agentic core must be self-sustaining. Every failure path must have a recovery path. No operation can leave the system in an unrecoverable state. If something fails, the user gets told, the system recovers, and the next message works. This extends TEMM1E's existing 4-layer resilience architecture (source elimination, catch_unwind, dead worker detection, global panic hook) into the agentic decision layer.
 
 ---
 
@@ -120,7 +120,7 @@ Trivial if ALL of:
 
 **Solution:** Add structured failure types. Feed compact failure signals into history instead of verbose text.
 
-**New types in `skyclaw-core`:**
+**New types in `temm1e-core`:**
 
 ```
 VerifyFailure {
@@ -172,7 +172,7 @@ RecoveryAction {
 
 **Solution:** For Complex tasks, generate an explicit plan, execute step-by-step with summary-only context.
 
-**Plan types in `skyclaw-core`:**
+**Plan types in `temm1e-core`:**
 
 ```
 TaskPlan {
@@ -255,7 +255,7 @@ The agentic core has three categories of failure, each with a mandatory recovery
 **Provider Failover Chain:**
 ```
 Primary provider (user-configured)
-  -> Secondary provider (if configured in skyclaw.toml)
+  -> Secondary provider (if configured in temm1e.toml)
     -> Degraded mode (respond with "I'm temporarily unable to process this, retrying in N seconds")
       -> Never: silent failure
 ```
@@ -312,12 +312,12 @@ Every promotion is logged for learning. Over time, these logs improve classifica
 
 ### Design Philosophy
 
-SkyClaw adopts the [Agent Skills open standard](https://agentskills.io) used by Claude Code, Cursor, Gemini CLI, and Codex CLI. This means:
+TEMM1E adopts the [Agent Skills open standard](https://agentskills.io) used by Claude Code, Cursor, Gemini CLI, and Codex CLI. This means:
 
 - Skills are `SKILL.md` files with YAML frontmatter — the same format works across ecosystems
 - Progressive disclosure: metadata always loaded, instructions on-demand, resources as-needed
 - Skills can be installed from Claude Code's marketplace and community repositories
-- SkyClaw-specific extensions are additive (extra frontmatter fields), never breaking
+- TEMM1E-specific extensions are additive (extra frontmatter fields), never breaking
 
 ### Skill Format (Compatible with Claude Code + Agent Skills Standard)
 
@@ -347,17 +347,17 @@ user-invocable: true             # If false, hidden from / menu, agent-only
 allowed-tools: Shell, FileRead   # Restrict which tools the skill can use
 argument-hint: "[environment]"   # Shown in autocomplete
 
-# === SkyClaw Extension Fields ===
-skyclaw-complexity: standard     # Hint for classification: trivial|simple|standard|complex
-skyclaw-max-budget-usd: 0.50    # Max spend when this skill is active
-skyclaw-require-approval: true   # Require user confirmation before execution
-skyclaw-channels: [telegram, discord]  # Restrict to specific channels (empty = all)
-skyclaw-timeout-seconds: 300     # Max execution time
+# === TEMM1E Extension Fields ===
+temm1e-complexity: standard     # Hint for classification: trivial|simple|standard|complex
+temm1e-max-budget-usd: 0.50    # Max spend when this skill is active
+temm1e-require-approval: true   # Require user confirmation before execution
+temm1e-channels: [telegram, discord]  # Restrict to specific channels (empty = all)
+temm1e-timeout-seconds: 300     # Max execution time
 ---
 
 # Deploy to Cloud
 
-Instructions for Claude/SkyClaw to follow when this skill is active.
+Instructions for Claude/TEMM1E to follow when this skill is active.
 
 ## Steps
 1. Verify the build is clean
@@ -400,32 +400,32 @@ If deployment fails, roll back to the previous version and notify the user.
 
 | Location | Scope | Priority |
 |---|---|---|
-| `~/.skyclaw/skills/<name>/SKILL.md` | User-level (all projects) | 1 (highest) |
-| `.skyclaw/skills/<name>/SKILL.md` | Project-level | 2 |
+| `~/.temm1e/skills/<name>/SKILL.md` | User-level (all projects) | 1 (highest) |
+| `.temm1e/skills/<name>/SKILL.md` | Project-level | 2 |
 | Plugin skills (installed) | Per-plugin namespace | 3 |
-| Built-in skills | Ship with SkyClaw binary | 4 (lowest) |
+| Built-in skills | Ship with TEMM1E binary | 4 (lowest) |
 
 **Cross-compatibility with Claude Code:**
 
-SkyClaw reads skills from `.claude/skills/` as a fallback path. This means:
-- A project with Claude Code skills in `.claude/skills/` works in SkyClaw out of the box
-- SkyClaw's own skills in `.skyclaw/skills/` take precedence if both exist
-- Claude Code marketplace plugins can be manually copied to `~/.skyclaw/plugins/` (not all features will work, but SKILL.md + scripts will)
+TEMM1E reads skills from `.claude/skills/` as a fallback path. This means:
+- A project with Claude Code skills in `.claude/skills/` works in TEMM1E out of the box
+- TEMM1E's own skills in `.temm1e/skills/` take precedence if both exist
+- Claude Code marketplace plugins can be manually copied to `~/.temm1e/plugins/` (not all features will work, but SKILL.md + scripts will)
 
 **Skill installation (CLI):**
 
 ```bash
 # Install from local directory
-skyclaw skill install ./path/to/skill/
+temm1e skill install ./path/to/skill/
 
 # Install from Git repository
-skyclaw skill install https://github.com/user/skill-repo
+temm1e skill install https://github.com/user/skill-repo
 
 # List installed skills
-skyclaw skill list
+temm1e skill list
 
 # Remove a skill
-skyclaw skill remove deploy-to-cloud
+temm1e skill remove deploy-to-cloud
 ```
 
 ### Skill Invocation
@@ -455,10 +455,10 @@ Users should be able to create skills conversationally:
 ```
 User: "Create a skill that checks my website uptime every hour"
 
-SkyClaw:
+TEMM1E:
 1. Generates SKILL.md with appropriate frontmatter
 2. Creates supporting scripts if needed
-3. Saves to ~/.skyclaw/skills/check-uptime/
+3. Saves to ~/.temm1e/skills/check-uptime/
 4. Confirms: "Created /check-uptime skill. Try it with /check-uptime https://mysite.com"
 ```
 
@@ -494,10 +494,10 @@ my-plugin/
   "name": "cloud-deploy-suite",
   "description": "Cloud deployment skills for AWS, GCP, and Azure",
   "version": "1.0.0",
-  "author": { "name": "SkyClaw Community" },
+  "author": { "name": "TEMM1E Community" },
   "homepage": "https://github.com/example/cloud-deploy-suite",
   "license": "MIT",
-  "skyclaw": {
+  "temm1e": {
     "min_version": "2.0.0",
     "required_tools": ["shell"],
     "required_features": ["browser"]
@@ -511,34 +511,34 @@ my-plugin/
 
 ```bash
 # Install from Git
-skyclaw plugin install https://github.com/user/my-plugin
+temm1e plugin install https://github.com/user/my-plugin
 
 # Install from local directory
-skyclaw plugin install ./my-plugin
+temm1e plugin install ./my-plugin
 
 # List installed plugins
-skyclaw plugin list
+temm1e plugin list
 
 # Remove plugin
-skyclaw plugin remove cloud-deploy-suite
+temm1e plugin remove cloud-deploy-suite
 ```
 
-**Plugin storage:** `~/.skyclaw/plugins/<plugin-name>/`
+**Plugin storage:** `~/.temm1e/plugins/<plugin-name>/`
 
-### SkyHub Marketplace (Future — Post v2.0)
+### TemHub Marketplace (Future — Post v2.0)
 
-The existing SkyHub concept (signed skill marketplace with ed25519 signatures) evolves to support the plugin format:
+The existing TemHub concept (signed skill marketplace with ed25519 signatures) evolves to support the plugin format:
 
-- Registry at `hub.skyclaw.dev` (future)
+- Registry at `hub.temm1e.dev` (future)
 - Skills/plugins are signed with author's ed25519 key
-- `skyclaw hub search "deploy"` — search the registry
-- `skyclaw hub install deploy-suite` — install from registry
+- `temm1e hub search "deploy"` — search the registry
+- `temm1e hub install deploy-suite` — install from registry
 - Signature verification on install (existing vault crypto)
 - Community ratings and reviews
 
-**Cross-ecosystem compatibility goal:** Any Claude Code skill from `anthropics/skills` or community repositories that follows the Agent Skills standard should work in SkyClaw with zero modification. SkyClaw-specific extensions (budget limits, channel restrictions, approval gates) are purely additive frontmatter fields that other tools ignore.
+**Cross-ecosystem compatibility goal:** Any Claude Code skill from `anthropics/skills` or community repositories that follows the Agent Skills standard should work in TEMM1E with zero modification. TEMM1E-specific extensions (budget limits, channel restrictions, approval gates) are purely additive frontmatter fields that other tools ignore.
 
-### Built-In Skills (Ship with SkyClaw)
+### Built-In Skills (Ship with TEMM1E)
 
 | Skill | Description | Complexity Hint |
 |---|---|---|
@@ -566,7 +566,7 @@ The existing SkyHub concept (signed skill marketplace with ed25519 signatures) e
 | `PreMessage` | Before agent processes a message | Content filtering, rate limiting |
 | `PostMessage` | After agent responds | Logging, analytics, notifications |
 
-**Hook configuration (in `skyclaw.toml`):**
+**Hook configuration (in `temm1e.toml`):**
 
 ```toml
 [hooks.PostToolUse]
@@ -609,7 +609,7 @@ A sub-agent is a specialized agent instance that:
 | Plan | Inherits | Read-only | Research for planning mode |
 | General | Inherits | All | Complex multi-step tasks |
 
-**Custom sub-agents:** Defined as Markdown files in `.skyclaw/agents/` (same format as Claude Code's `.claude/agents/`):
+**Custom sub-agents:** Defined as Markdown files in `.temm1e/agents/` (same format as Claude Code's `.claude/agents/`):
 
 ```yaml
 ---
@@ -622,7 +622,7 @@ model: sonnet
 You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 ```
 
-**Why defer to post-v2.0:** Sub-agents require message routing between isolated context windows, which is architectural work in `skyclaw-gateway`. The v2.0 skill system provides 80% of the value (specialized behavior per task) without the complexity of isolated contexts.
+**Why defer to post-v2.0:** Sub-agents require message routing between isolated context windows, which is architectural work in `temm1e-gateway`. The v2.0 skill system provides 80% of the value (specialized behavior per task) without the complexity of isolated contexts.
 
 ---
 
@@ -634,13 +634,13 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 | Task | Crate | Files | Risk |
 |---|---|---|---|
-| Add `Trivial` tier to complexity classifier | skyclaw-agent | `model_router.rs` | Low |
-| Add `PromptTier` enum | skyclaw-core | `types/mod.rs` | Low |
-| Add `ExecutionProfile` struct | skyclaw-core | `types/mod.rs` | Low |
-| Implement tiered prompt building | skyclaw-agent | `prompt_optimizer.rs` | Low |
-| Wire tier into `build_system_prompt()` | skyclaw-agent | `context.rs` | Medium |
-| Trivial fast-path in runtime loop | skyclaw-agent | `runtime.rs` | Medium |
-| Escalation: Trivial -> Simple if tool_use detected | skyclaw-agent | `runtime.rs` | Low |
+| Add `Trivial` tier to complexity classifier | temm1e-agent | `model_router.rs` | Low |
+| Add `PromptTier` enum | temm1e-core | `types/mod.rs` | Low |
+| Add `ExecutionProfile` struct | temm1e-core | `types/mod.rs` | Low |
+| Implement tiered prompt building | temm1e-agent | `prompt_optimizer.rs` | Low |
+| Wire tier into `build_system_prompt()` | temm1e-agent | `context.rs` | Medium |
+| Trivial fast-path in runtime loop | temm1e-agent | `runtime.rs` | Medium |
+| Escalation: Trivial -> Simple if tool_use detected | temm1e-agent | `runtime.rs` | Low |
 
 **Validation:**
 - All 1141 existing tests pass
@@ -654,12 +654,12 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 | Task | Crate | Files | Risk |
 |---|---|---|---|
-| Add `VerifyFailure`, `FailureKind`, `Retryability` types | skyclaw-core | `types/error.rs` | Low |
-| Add `RecoveryAction` enum | skyclaw-core | `types/error.rs` | Low |
-| Complexity-aware tool output caps | skyclaw-agent | `runtime.rs`, `output_compression.rs` | Medium |
-| Structured failure construction from tool errors | skyclaw-agent | `runtime.rs` | Medium |
-| Recovery action dispatch (replace strategy rotation) | skyclaw-agent | `runtime.rs` | Medium |
-| Compact failure injection into history | skyclaw-agent | `runtime.rs` | Medium |
+| Add `VerifyFailure`, `FailureKind`, `Retryability` types | temm1e-core | `types/error.rs` | Low |
+| Add `RecoveryAction` enum | temm1e-core | `types/error.rs` | Low |
+| Complexity-aware tool output caps | temm1e-agent | `runtime.rs`, `output_compression.rs` | Medium |
+| Structured failure construction from tool errors | temm1e-agent | `runtime.rs` | Medium |
+| Recovery action dispatch (replace strategy rotation) | temm1e-agent | `runtime.rs` | Medium |
+| Compact failure injection into history | temm1e-agent | `runtime.rs` | Medium |
 
 **Validation:**
 - Strategy rotation tests updated for new recovery actions
@@ -673,15 +673,15 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 | Task | Crate | Files | Risk |
 |---|---|---|---|
-| SKILL.md parser (YAML frontmatter + markdown body) | skyclaw-skills | New: `parser.rs` | Medium |
-| Skill discovery (scan directories, build metadata index) | skyclaw-skills | New: `discovery.rs` | Medium |
-| Skill registry (load, list, match by description) | skyclaw-skills | New: `registry.rs` | Medium |
-| Skill invocation (load Level 2 on trigger, inject into context) | skyclaw-agent | `runtime.rs`, `context.rs` | High |
-| `/skill` slash command (list, install, remove) | skyclaw-skills | New: `commands.rs` | Medium |
-| Migrate existing built-in commands to SKILL.md format | skyclaw-skills | New: `skills/` directory | Medium |
-| Skill argument substitution (`$ARGUMENTS`, `$0`, `$1`) | skyclaw-skills | `parser.rs` | Low |
-| Claude Code `.claude/skills/` fallback path | skyclaw-skills | `discovery.rs` | Low |
-| Dynamic context injection (`!`command`` syntax) | skyclaw-skills | `parser.rs` | Medium |
+| SKILL.md parser (YAML frontmatter + markdown body) | temm1e-skills | New: `parser.rs` | Medium |
+| Skill discovery (scan directories, build metadata index) | temm1e-skills | New: `discovery.rs` | Medium |
+| Skill registry (load, list, match by description) | temm1e-skills | New: `registry.rs` | Medium |
+| Skill invocation (load Level 2 on trigger, inject into context) | temm1e-agent | `runtime.rs`, `context.rs` | High |
+| `/skill` slash command (list, install, remove) | temm1e-skills | New: `commands.rs` | Medium |
+| Migrate existing built-in commands to SKILL.md format | temm1e-skills | New: `skills/` directory | Medium |
+| Skill argument substitution (`$ARGUMENTS`, `$0`, `$1`) | temm1e-skills | `parser.rs` | Low |
+| Claude Code `.claude/skills/` fallback path | temm1e-skills | `discovery.rs` | Low |
+| Dynamic context injection (`!`command`` syntax) | temm1e-skills | `parser.rs` | Medium |
 
 **Validation:**
 - Create 5+ test skills, verify discovery and invocation
@@ -696,15 +696,15 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 | Task | Crate | Files | Risk |
 |---|---|---|---|
-| Add `TaskPlan`, `PlanStep`, `StepCheckpoint` types | skyclaw-core | New: `types/plan.rs` | Low |
-| Plan generation prompt + JSON parsing | skyclaw-agent | New: `planner.rs` | High |
-| Summary-only step context builder | skyclaw-agent | `context.rs` | High |
-| Checkpointed step execution | skyclaw-agent | `runtime.rs` | High |
-| Checkpoint persistence (SQLite) | skyclaw-memory | `sqlite.rs` | Medium |
-| Plan presentation via channel | skyclaw-channels | Channel trait extension | Medium |
-| Progress updates per step | skyclaw-channels | Channel trait extension | Low |
-| Fallback: plan failure -> Standard loop | skyclaw-agent | `runtime.rs` | Medium |
-| Feature flag: `[agent] enable_plan_generation = false` | skyclaw-core | `types/config.rs` | Low |
+| Add `TaskPlan`, `PlanStep`, `StepCheckpoint` types | temm1e-core | New: `types/plan.rs` | Low |
+| Plan generation prompt + JSON parsing | temm1e-agent | New: `planner.rs` | High |
+| Summary-only step context builder | temm1e-agent | `context.rs` | High |
+| Checkpointed step execution | temm1e-agent | `runtime.rs` | High |
+| Checkpoint persistence (SQLite) | temm1e-memory | `sqlite.rs` | Medium |
+| Plan presentation via channel | temm1e-channels | Channel trait extension | Medium |
+| Progress updates per step | temm1e-channels | Channel trait extension | Low |
+| Fallback: plan failure -> Standard loop | temm1e-agent | `runtime.rs` | Medium |
+| Feature flag: `[agent] enable_plan_generation = false` | temm1e-core | `types/config.rs` | Low |
 
 **Validation:**
 - Complex tasks (multi-step file operations, research + write) produce plans
@@ -719,13 +719,13 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 | Task | Crate | Files | Risk |
 |---|---|---|---|
-| Plugin manifest parser (`plugin.json`) | skyclaw-skills | New: `plugin.rs` | Medium |
-| Plugin installation (git clone + validate) | skyclaw-skills | `plugin.rs` | Medium |
-| Plugin namespacing (prefix skill names) | skyclaw-skills | `registry.rs` | Medium |
-| Hook event system (PreToolUse, PostToolUse, etc.) | skyclaw-core | New: `types/hooks.rs` | Medium |
-| Hook executor (spawn command, pass JSON stdin) | skyclaw-agent | New: `hooks.rs` | Medium |
-| Hook configuration in `skyclaw.toml` | skyclaw-core | `types/config.rs` | Low |
-| Skill-scoped hooks (from SKILL.md frontmatter) | skyclaw-skills | `parser.rs` | Medium |
+| Plugin manifest parser (`plugin.json`) | temm1e-skills | New: `plugin.rs` | Medium |
+| Plugin installation (git clone + validate) | temm1e-skills | `plugin.rs` | Medium |
+| Plugin namespacing (prefix skill names) | temm1e-skills | `registry.rs` | Medium |
+| Hook event system (PreToolUse, PostToolUse, etc.) | temm1e-core | New: `types/hooks.rs` | Medium |
+| Hook executor (spawn command, pass JSON stdin) | temm1e-agent | New: `hooks.rs` | Medium |
+| Hook configuration in `temm1e.toml` | temm1e-core | `types/config.rs` | Low |
+| Skill-scoped hooks (from SKILL.md frontmatter) | temm1e-skills | `parser.rs` | Medium |
 
 **Validation:**
 - Install a multi-skill plugin, verify all skills discoverable
@@ -740,13 +740,13 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 ### Backwards Compatibility Guarantees
 
 1. **All v1.7.0 behavior is the default.** New features are additive or behind feature flags.
-2. **Existing `skyclaw.toml` configs work unchanged.** New config fields have sane defaults.
+2. **Existing `temm1e.toml` configs work unchanged.** New config fields have sane defaults.
 3. **Existing conversations/sessions are preserved.** Memory DB schema extensions are additive (new columns with defaults).
 4. **Provider integrations untouched.** Token optimization happens at the agent layer, not the provider layer.
 
 ### Claude Code Ecosystem Compatibility Matrix
 
-| Feature | Claude Code | SkyClaw v2.0 | Compatibility |
+| Feature | Claude Code | TEMM1E v2.0 | Compatibility |
 |---|---|---|---|
 | SKILL.md with YAML frontmatter | Full support | Full support | 100% |
 | Skill progressive loading (3 levels) | Full support | Full support | 100% |
@@ -754,16 +754,16 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 | `!`command`` dynamic injection | Full support | Full support | 100% |
 | `context: fork` (sub-agent) | Full support | Deferred | Parsed, ignored gracefully |
 | `agent:` field | Full support | Deferred | Parsed, ignored gracefully |
-| `allowed-tools` | Full support | Full support | Mapped to SkyClaw tool names |
+| `allowed-tools` | Full support | Full support | Mapped to TEMM1E tool names |
 | `disable-model-invocation` | Full support | Full support | 100% |
 | `user-invocable` | Full support | Full support | 100% |
-| `model:` field | Full support | Partial | Mapped to SkyClaw provider/model pairs |
+| `model:` field | Full support | Partial | Mapped to TEMM1E provider/model pairs |
 | `hooks:` in SKILL.md | Full support | Phase 5 | Parsed, ignored until Phase 5 |
 | Plugin marketplace install | Full support | Phase 5+ | Manual install first, marketplace later |
-| `.claude/skills/` path | Native | Fallback | SkyClaw reads as secondary path |
+| `.claude/skills/` path | Native | Fallback | TEMM1E reads as secondary path |
 | `.claude/agents/` | Full support | Deferred | Not read until sub-agent phase |
 
-**Graceful degradation for unsupported fields:** When SkyClaw encounters a SKILL.md with Claude Code fields it doesn't yet support (e.g., `context: fork`), it logs a debug message and ignores the field. The skill still works — it just runs in the main context instead of a fork. This ensures Claude Code community skills are usable immediately, with full feature parity coming in later phases.
+**Graceful degradation for unsupported fields:** When TEMM1E encounters a SKILL.md with Claude Code fields it doesn't yet support (e.g., `context: fork`), it logs a debug message and ignores the field. The skill still works — it just runs in the main context instead of a fork. This ensures Claude Code community skills are usable immediately, with full feature parity coming in later phases.
 
 ---
 
@@ -777,7 +777,7 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 | Enhance FailureTracker not replace | Production-tested code, structured types add to it |
 | Defer memory scoring | Store too small, existing budgets sufficient |
 | Agent Skills standard for skills | Cross-ecosystem compatibility, massive existing skill library |
-| `.skyclaw/` primary, `.claude/` fallback | Own namespace, but leverage existing Claude Code project skills |
+| `.temm1e/` primary, `.claude/` fallback | Own namespace, but leverage existing Claude Code project skills |
 | No blocking human gates | Channel architecture is async mpsc, blocking waits need architectural work |
 | Feature flag for plan generation | High-risk feature needs controlled rollout to live users |
 | Hooks never block on failure | Resilience invariant: user-defined code cannot kill the agent |
@@ -786,40 +786,40 @@ You are a security reviewer. Analyze code for OWASP top 10 vulnerabilities...
 
 ```
 Phase 1 (Foundation):
-  MODIFY: crates/skyclaw-core/src/types/mod.rs         (PromptTier, ExecutionProfile)
-  MODIFY: crates/skyclaw-agent/src/model_router.rs      (Trivial classification)
-  MODIFY: crates/skyclaw-agent/src/prompt_optimizer.rs   (tiered prompt building)
-  MODIFY: crates/skyclaw-agent/src/context.rs            (tier-aware prompt construction)
-  MODIFY: crates/skyclaw-agent/src/runtime.rs            (fast-path, escalation)
+  MODIFY: crates/temm1e-core/src/types/mod.rs         (PromptTier, ExecutionProfile)
+  MODIFY: crates/temm1e-agent/src/model_router.rs      (Trivial classification)
+  MODIFY: crates/temm1e-agent/src/prompt_optimizer.rs   (tiered prompt building)
+  MODIFY: crates/temm1e-agent/src/context.rs            (tier-aware prompt construction)
+  MODIFY: crates/temm1e-agent/src/runtime.rs            (fast-path, escalation)
 
 Phase 2 (Token Optimization):
-  MODIFY: crates/skyclaw-core/src/types/error.rs         (VerifyFailure, RecoveryAction)
-  MODIFY: crates/skyclaw-agent/src/runtime.rs            (structured failure, recovery dispatch)
-  MODIFY: crates/skyclaw-agent/src/output_compression.rs (complexity-aware caps)
+  MODIFY: crates/temm1e-core/src/types/error.rs         (VerifyFailure, RecoveryAction)
+  MODIFY: crates/temm1e-agent/src/runtime.rs            (structured failure, recovery dispatch)
+  MODIFY: crates/temm1e-agent/src/output_compression.rs (complexity-aware caps)
 
 Phase 3 (Skill System):
-  CREATE: crates/skyclaw-skills/src/parser.rs            (SKILL.md parser)
-  CREATE: crates/skyclaw-skills/src/discovery.rs         (directory scanning)
-  CREATE: crates/skyclaw-skills/src/registry.rs          (load, list, match)
-  CREATE: crates/skyclaw-skills/src/commands.rs          (CLI commands)
-  CREATE: .skyclaw/skills/*/SKILL.md                     (built-in skills)
-  MODIFY: crates/skyclaw-agent/src/runtime.rs            (skill invocation)
-  MODIFY: crates/skyclaw-agent/src/context.rs            (skill metadata injection)
+  CREATE: crates/temm1e-skills/src/parser.rs            (SKILL.md parser)
+  CREATE: crates/temm1e-skills/src/discovery.rs         (directory scanning)
+  CREATE: crates/temm1e-skills/src/registry.rs          (load, list, match)
+  CREATE: crates/temm1e-skills/src/commands.rs          (CLI commands)
+  CREATE: .temm1e/skills/*/SKILL.md                     (built-in skills)
+  MODIFY: crates/temm1e-agent/src/runtime.rs            (skill invocation)
+  MODIFY: crates/temm1e-agent/src/context.rs            (skill metadata injection)
 
 Phase 4 (Plan Generation):
-  CREATE: crates/skyclaw-core/src/types/plan.rs          (TaskPlan types)
-  CREATE: crates/skyclaw-agent/src/planner.rs            (plan generation)
-  MODIFY: crates/skyclaw-agent/src/runtime.rs            (checkpointed execution)
-  MODIFY: crates/skyclaw-agent/src/context.rs            (summary-only step context)
-  MODIFY: crates/skyclaw-memory/src/sqlite.rs            (checkpoint persistence)
-  MODIFY: crates/skyclaw-core/src/types/config.rs        (feature flag)
+  CREATE: crates/temm1e-core/src/types/plan.rs          (TaskPlan types)
+  CREATE: crates/temm1e-agent/src/planner.rs            (plan generation)
+  MODIFY: crates/temm1e-agent/src/runtime.rs            (checkpointed execution)
+  MODIFY: crates/temm1e-agent/src/context.rs            (summary-only step context)
+  MODIFY: crates/temm1e-memory/src/sqlite.rs            (checkpoint persistence)
+  MODIFY: crates/temm1e-core/src/types/config.rs        (feature flag)
 
 Phase 5 (Plugins & Hooks):
-  CREATE: crates/skyclaw-skills/src/plugin.rs            (plugin manifest, install)
-  CREATE: crates/skyclaw-core/src/types/hooks.rs         (hook event types)
-  CREATE: crates/skyclaw-agent/src/hooks.rs              (hook executor)
-  MODIFY: crates/skyclaw-skills/src/registry.rs          (plugin namespacing)
-  MODIFY: crates/skyclaw-core/src/types/config.rs        (hook config)
+  CREATE: crates/temm1e-skills/src/plugin.rs            (plugin manifest, install)
+  CREATE: crates/temm1e-core/src/types/hooks.rs         (hook event types)
+  CREATE: crates/temm1e-agent/src/hooks.rs              (hook executor)
+  MODIFY: crates/temm1e-skills/src/registry.rs          (plugin namespacing)
+  MODIFY: crates/temm1e-core/src/types/config.rs        (hook config)
 ```
 
 ## Appendix C: Research Sources
