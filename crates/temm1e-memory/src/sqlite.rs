@@ -1,10 +1,10 @@
 //! SQLite-backed memory implementation.
 
 use async_trait::async_trait;
-use temm1e_core::error::Temm1eError;
-use temm1e_core::{Memory, MemoryEntry, MemoryEntryType, SearchOpts};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::time::Duration;
+use temm1e_core::error::Temm1eError;
+use temm1e_core::{Memory, MemoryEntry, MemoryEntryType, SearchOpts};
 use tokio::time::{sleep, timeout};
 use tracing::{debug, info, warn};
 
@@ -130,11 +130,7 @@ impl Memory for SqliteMemory {
         Ok(())
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        opts: SearchOpts,
-    ) -> Result<Vec<MemoryEntry>, Temm1eError> {
+    async fn search(&self, query: &str, opts: SearchOpts) -> Result<Vec<MemoryEntry>, Temm1eError> {
         // Split multi-word queries into individual word matches (AND logic).
         // Each word is matched against both content AND id fields.
         // This handles cases like "cat name" matching "cat's name" in content.

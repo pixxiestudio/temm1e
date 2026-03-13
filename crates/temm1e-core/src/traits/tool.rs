@@ -57,9 +57,6 @@ pub trait Tool: Send + Sync {
     fn declarations(&self) -> ToolDeclarations;
 
     /// Execute the tool with given input
-    async fn execute(
-        &self,
-        input: ToolInput,
-        ctx: &ToolContext,
-    ) -> Result<ToolOutput, Temm1eError>;
+    async fn execute(&self, input: ToolInput, ctx: &ToolContext)
+        -> Result<ToolOutput, Temm1eError>;
 }

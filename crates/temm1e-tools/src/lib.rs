@@ -30,9 +30,9 @@ pub use shell::ShellTool;
 pub use usage_audit::UsageAuditTool;
 pub use web_fetch::WebFetchTool;
 
+use std::sync::Arc;
 use temm1e_core::types::config::ToolsConfig;
 use temm1e_core::{Channel, Memory, SetupLinkGenerator, Tool, UsageStore};
-use std::sync::Arc;
 
 /// Create tools based on the configuration flags.
 /// Pass an optional channel for file transfer tools, an optional

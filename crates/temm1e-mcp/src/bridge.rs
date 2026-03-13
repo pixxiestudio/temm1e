@@ -5,8 +5,8 @@
 
 use crate::client::McpClient;
 use async_trait::async_trait;
-use temm1e_core::{Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput};
 use std::sync::Arc;
+use temm1e_core::{Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput};
 use tracing::{debug, warn};
 
 /// Bridge adapter: wraps a single MCP tool as a TEMM1E Tool.

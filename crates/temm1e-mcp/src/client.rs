@@ -2,8 +2,8 @@
 //! initialize handshake, tool discovery, tool invocation, ping.
 
 use crate::transport::Transport;
-use temm1e_core::types::error::Temm1eError;
 use std::sync::Arc;
+use temm1e_core::types::error::Temm1eError;
 use tracing::{debug, info};
 
 /// Information about a single tool exposed by an MCP server.

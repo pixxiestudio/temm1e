@@ -3,8 +3,8 @@
 //! For v0.1 this implements keyword-only scoring with a simple TF-IDF-like
 //! relevance model. Vector similarity can be layered in later.
 
-use temm1e_core::MemoryEntry;
 use std::collections::HashMap;
+use temm1e_core::MemoryEntry;
 
 /// Compute keyword relevance scores and return entries sorted by descending score.
 ///

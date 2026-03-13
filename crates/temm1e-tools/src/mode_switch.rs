@@ -75,10 +75,7 @@ impl Tool for ModeSwitchTool {
             "work" => Temm1eMode::Work,
             other => {
                 return Ok(ToolOutput {
-                    content: format!(
-                        "Unknown mode '{}'. Valid modes: play, work",
-                        other
-                    ),
+                    content: format!("Unknown mode '{}'. Valid modes: play, work", other),
                     is_error: true,
                 });
             }

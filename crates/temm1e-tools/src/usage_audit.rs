@@ -207,9 +207,9 @@ impl Tool for UsageAuditTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use temm1e_core::{UsageRecord, UsageSummary};
     use std::path::PathBuf;
     use std::sync::Mutex;
+    use temm1e_core::{UsageRecord, UsageSummary};
 
     /// Mock UsageStore for testing.
     struct MockUsageStore {

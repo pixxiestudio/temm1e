@@ -12,11 +12,11 @@ use aws_sdk_s3::Client;
 use bytes::Bytes;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use std::time::Duration;
 use temm1e_core::error::Temm1eError;
 use temm1e_core::file::FileMetadata;
 use temm1e_core::types::config::FileStoreConfig;
 use temm1e_core::FileStore;
-use std::time::Duration;
 use tracing::{debug, info};
 
 /// An S3-compatible file store (AWS S3, Cloudflare R2, MinIO, etc.).

@@ -4,8 +4,8 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use temm1e_core::types::error::Temm1eError;
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+use temm1e_core::types::error::Temm1eError;
 use tracing::{debug, info};
 use uuid::Uuid;
 

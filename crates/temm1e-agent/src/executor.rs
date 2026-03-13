@@ -563,9 +563,9 @@ fn validate_sandbox(tool: &dyn Tool, session: &SessionContext) -> Result<(), Tem
 mod tests {
     use super::*;
     use async_trait::async_trait;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use temm1e_core::{PathAccess, ToolDeclarations};
     use temm1e_test_utils::{make_session, MockTool};
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     // ── Test helpers ────────────────────────────────────────────────────
 

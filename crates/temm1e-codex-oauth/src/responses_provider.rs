@@ -10,10 +10,10 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use std::sync::Arc;
 use temm1e_core::types::error::Temm1eError;
 use temm1e_core::types::message::*;
 use temm1e_core::Provider;
-use std::sync::Arc;
 
 use crate::token_store::TokenStore;
 

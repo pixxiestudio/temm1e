@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use reqwest::Client;
 use serde::Deserialize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use temm1e_core::types::error::Temm1eError;
 use temm1e_core::types::message::{
     ChatMessage, CompletionRequest, CompletionResponse, ContentPart, MessageContent, Role,
     StreamChunk, ToolDefinition, Usage,
 };
 use temm1e_core::Provider;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::{debug, error, info};
 
 /// Anthropic Messages API provider with key rotation.

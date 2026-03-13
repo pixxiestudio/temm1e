@@ -46,9 +46,7 @@ impl Transport for NullTransport {
         _method: &str,
         _params: Option<serde_json::Value>,
     ) -> Result<JsonRpcResponse, Temm1eError> {
-        Err(Temm1eError::Tool(
-            "MCP server is not connected".to_string(),
-        ))
+        Err(Temm1eError::Tool("MCP server is not connected".to_string()))
     }
 
     async fn notify(
@@ -56,9 +54,7 @@ impl Transport for NullTransport {
         _method: &str,
         _params: Option<serde_json::Value>,
     ) -> Result<(), Temm1eError> {
-        Err(Temm1eError::Tool(
-            "MCP server is not connected".to_string(),
-        ))
+        Err(Temm1eError::Tool("MCP server is not connected".to_string()))
     }
 
     fn is_alive(&self) -> bool {

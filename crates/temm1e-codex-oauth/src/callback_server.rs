@@ -5,8 +5,8 @@
 
 use axum::{extract::Query, response::Html, routing::get, Router};
 use serde::Deserialize;
-use temm1e_core::types::error::Temm1eError;
 use std::net::TcpListener;
+use temm1e_core::types::error::Temm1eError;
 use tokio::sync::oneshot;
 
 /// Query parameters from the OAuth callback redirect.

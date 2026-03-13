@@ -69,9 +69,8 @@ fn save_allowlist_file(data: &AllowlistFile) -> Result<(), Temm1eError> {
             Temm1eError::Channel(format!("Failed to create ~/.temm1e directory: {e}"))
         })?;
     }
-    let content = toml::to_string_pretty(data).map_err(|e| {
-        Temm1eError::Channel(format!("Failed to serialize Discord allowlist: {e}"))
-    })?;
+    let content = toml::to_string_pretty(data)
+        .map_err(|e| Temm1eError::Channel(format!("Failed to serialize Discord allowlist: {e}")))?;
     std::fs::write(&path, content).map_err(|e| {
         Temm1eError::Channel(format!("Failed to write Discord allowlist file: {e}"))
     })?;

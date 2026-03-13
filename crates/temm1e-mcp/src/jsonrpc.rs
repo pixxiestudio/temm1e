@@ -81,9 +81,7 @@ impl JsonRpcResponse {
     }
 
     /// Extract the result value, or return the error as a Temm1eError.
-    pub fn into_result(
-        self,
-    ) -> Result<serde_json::Value, temm1e_core::types::error::Temm1eError> {
+    pub fn into_result(self) -> Result<serde_json::Value, temm1e_core::types::error::Temm1eError> {
         if let Some(err) = self.error {
             Err(temm1e_core::types::error::Temm1eError::Tool(format!(
                 "MCP error {}: {}",

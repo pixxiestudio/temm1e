@@ -1,9 +1,9 @@
 //! Shared file transfer utilities for all channels.
 
 use bytes::Bytes;
+use std::path::{Path, PathBuf};
 use temm1e_core::types::error::Temm1eError;
 use temm1e_core::types::file::{FileData, OutboundFile, ReceivedFile};
-use std::path::{Path, PathBuf};
 
 /// Save a received file to the workspace directory.
 ///
@@ -26,9 +26,9 @@ pub async fn save_received_file(
 
     let dest = workspace.join(&safe_name);
 
-    tokio::fs::write(&dest, &file.data).await.map_err(|e| {
-        Temm1eError::FileTransfer(format!("Failed to write file {safe_name}: {e}"))
-    })?;
+    tokio::fs::write(&dest, &file.data)
+        .await
+        .map_err(|e| Temm1eError::FileTransfer(format!("Failed to write file {safe_name}: {e}")))?;
 
     tracing::info!(path = %dest.display(), size = file.size, "Saved received file");
     Ok(dest)

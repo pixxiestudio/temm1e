@@ -6,9 +6,9 @@
 
 use async_trait::async_trait;
 use chrono::Utc;
+use std::path::{Path, PathBuf};
 use temm1e_core::error::Temm1eError;
 use temm1e_core::{Memory, MemoryEntry, MemoryEntryType, SearchOpts};
-use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, info};
 
@@ -216,11 +216,7 @@ impl Memory for MarkdownMemory {
         Ok(())
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        opts: SearchOpts,
-    ) -> Result<Vec<MemoryEntry>, Temm1eError> {
+    async fn search(&self, query: &str, opts: SearchOpts) -> Result<Vec<MemoryEntry>, Temm1eError> {
         let mut entries = self.all_entries().await?;
 
         // Apply filters.

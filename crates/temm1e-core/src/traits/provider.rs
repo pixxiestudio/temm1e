@@ -10,10 +10,8 @@ pub trait Provider: Send + Sync {
     fn name(&self) -> &str;
 
     /// Send a completion request and get a full response
-    async fn complete(
-        &self,
-        request: CompletionRequest,
-    ) -> Result<CompletionResponse, Temm1eError>;
+    async fn complete(&self, request: CompletionRequest)
+        -> Result<CompletionResponse, Temm1eError>;
 
     /// Send a completion request and get a streaming response
     async fn stream(

@@ -28,10 +28,10 @@ pub use discord::DiscordChannel;
 #[cfg(feature = "slack")]
 pub use slack::SlackChannel;
 
+use std::path::PathBuf;
 use temm1e_core::types::config::ChannelConfig;
 use temm1e_core::types::error::Temm1eError;
 use temm1e_core::Channel;
-use std::path::PathBuf;
 
 /// Factory function to create a channel by name.
 ///

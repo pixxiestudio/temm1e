@@ -8,8 +8,8 @@
 use crate::config::McpServerConfig;
 use crate::manager::McpManager;
 use async_trait::async_trait;
-use temm1e_core::{Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput};
 use std::sync::Arc;
+use temm1e_core::{Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput};
 use tracing::{info, warn};
 
 /// Agent tool for self-installing MCP servers.

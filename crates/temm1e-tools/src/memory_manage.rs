@@ -567,8 +567,8 @@ impl Tool for MemoryManageTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use temm1e_test_utils::MockMemory;
     use std::path::PathBuf;
+    use temm1e_test_utils::MockMemory;
 
     fn test_ctx() -> ToolContext {
         ToolContext {

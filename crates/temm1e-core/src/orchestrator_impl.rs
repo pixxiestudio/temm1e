@@ -22,8 +22,7 @@ use crate::{AgentInstance, AgentSpec, Orchestrator};
 #[async_trait]
 pub trait DockerClient: Send + Sync {
     /// POST /containers/create — returns the container ID on success.
-    async fn create_container(&self, spec: &ContainerCreateRequest)
-        -> Result<String, Temm1eError>;
+    async fn create_container(&self, spec: &ContainerCreateRequest) -> Result<String, Temm1eError>;
 
     /// POST /containers/{id}/start
     async fn start_container(&self, id: &str) -> Result<(), Temm1eError>;

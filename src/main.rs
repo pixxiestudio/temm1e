@@ -1722,7 +1722,11 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Commands::Start { daemon, log, personality } => {
+        Commands::Start {
+            daemon,
+            log,
+            personality,
+        } => {
             // ── Parse personality mode ───────────────────────────
             let temm1e_mode = match personality.to_lowercase().as_str() {
                 "work" => temm1e_core::types::config::Temm1eMode::Work,
@@ -2049,7 +2053,8 @@ async fn main() -> Result<()> {
                             config.agent.max_spend_usd,
                         )
                         .with_v2_optimizations(config.agent.v2_optimizations)
-                        .with_parallel_phases(config.agent.parallel_phases).with_shared_mode(shared_mode.clone()),
+                        .with_parallel_phases(config.agent.parallel_phases)
+                        .with_shared_mode(shared_mode.clone()),
                     );
                     *agent_state.write().await = Some(agent);
                     tracing::info!(provider = %pname, model = %model, "Agent initialized");
@@ -2083,7 +2088,8 @@ async fn main() -> Result<()> {
                                         config.agent.max_spend_usd,
                                     )
                                     .with_v2_optimizations(config.agent.v2_optimizations)
-                                    .with_parallel_phases(config.agent.parallel_phases).with_shared_mode(shared_mode.clone()),
+                                    .with_parallel_phases(config.agent.parallel_phases)
+                                    .with_shared_mode(shared_mode.clone()),
                                 );
                                 *agent_state.write().await = Some(agent);
                                 tracing::info!(provider = "openai-codex", model = %model, "Agent initialized via Codex OAuth");
@@ -3956,7 +3962,8 @@ Just type a message to chat with the AI agent.",
                                     max_spend,
                                 )
                                 .with_v2_optimizations(v2_opt)
-                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                .with_parallel_phases(pp_opt)
+                                .with_shared_mode(shared_mode.clone()),
                             );
                             println!("Connected to {} (model: {})", pname, model);
                             if max_spend > 0.0 {
@@ -4002,7 +4009,8 @@ Just type a message to chat with the AI agent.",
                                         max_spend,
                                     )
                                     .with_v2_optimizations(v2_opt)
-                                    .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                    .with_parallel_phases(pp_opt)
+                                    .with_shared_mode(shared_mode.clone()),
                                 );
                                 println!(
                                     "Connected to openai-codex via Codex OAuth (model: {})",
@@ -4216,9 +4224,7 @@ Just type a message to chat with the AI agent.",
                                                 mcp_manager.bridge_tools(&tool_names).await;
                                             new_tools.extend(mcp_tools);
                                             new_tools.push(Arc::new(
-                                                temm1e_mcp::McpManageTool::new(
-                                                    mcp_manager.clone(),
-                                                ),
+                                                temm1e_mcp::McpManageTool::new(mcp_manager.clone()),
                                             ));
                                             new_tools
                                                 .push(Arc::new(temm1e_mcp::SelfExtendTool::new()));
@@ -4241,7 +4247,8 @@ Just type a message to chat with the AI agent.",
                                                     max_spend,
                                                 )
                                                 .with_v2_optimizations(v2_opt)
-                                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                                .with_parallel_phases(pp_opt)
+                                                .with_shared_mode(shared_mode.clone()),
                                             );
                                         }
                                         mcp_manager.take_tools_changed();
@@ -4287,7 +4294,8 @@ Just type a message to chat with the AI agent.",
                                             max_spend,
                                         )
                                         .with_v2_optimizations(v2_opt)
-                                        .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                        .with_parallel_phases(pp_opt)
+                                        .with_shared_mode(shared_mode.clone()),
                                     );
                                 }
                                 mcp_manager.take_tools_changed();
@@ -4328,7 +4336,8 @@ Just type a message to chat with the AI agent.",
                                             max_spend,
                                         )
                                         .with_v2_optimizations(v2_opt)
-                                        .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                        .with_parallel_phases(pp_opt)
+                                        .with_shared_mode(shared_mode.clone()),
                                     );
                                 }
                                 mcp_manager.take_tools_changed();
@@ -4408,7 +4417,8 @@ Just type a message to chat with the AI agent.",
                                                 max_spend,
                                             )
                                             .with_v2_optimizations(v2_opt)
-                                            .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                            .with_parallel_phases(pp_opt)
+                                            .with_shared_mode(shared_mode.clone()),
                                         );
                                         println!(
                                             "\nAPI key securely received and verified! Configured {} with model {}.",
@@ -4476,7 +4486,8 @@ Just type a message to chat with the AI agent.",
                                     max_spend,
                                 )
                                 .with_v2_optimizations(v2_opt)
-                                .with_parallel_phases(pp_opt).with_shared_mode(shared_mode.clone()),
+                                .with_parallel_phases(pp_opt)
+                                .with_shared_mode(shared_mode.clone()),
                             );
                             println!(
                                 "\nAPI key verified! Configured {} with model {}.",

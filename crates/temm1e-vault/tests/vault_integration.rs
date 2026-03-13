@@ -40,9 +40,7 @@ async fn vault_resolver_missing_key_returns_none() {
         .await
         .unwrap();
 
-    let result = resolve(&vault, "vault://temm1e/nonexistent")
-        .await
-        .unwrap();
+    let result = resolve(&vault, "vault://temm1e/nonexistent").await.unwrap();
     assert!(result.is_none());
 }
 

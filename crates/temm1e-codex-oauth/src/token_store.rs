@@ -5,9 +5,9 @@
 //! refresh happens at a time (prevents `refresh_token_reused` errors).
 
 use serde::{Deserialize, Serialize};
-use temm1e_core::types::error::Temm1eError;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use temm1e_core::types::error::Temm1eError;
 use tokio::sync::Mutex;
 
 /// OAuth token set — stored in ~/.temm1e/oauth.json

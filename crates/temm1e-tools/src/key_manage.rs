@@ -8,9 +8,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use temm1e_core::types::error::Temm1eError;
-use temm1e_core::{
-    SetupLinkGenerator, Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput,
-};
+use temm1e_core::{SetupLinkGenerator, Tool, ToolContext, ToolDeclarations, ToolInput, ToolOutput};
 
 pub struct KeyManageTool {
     link_generator: Option<Arc<dyn SetupLinkGenerator>>,

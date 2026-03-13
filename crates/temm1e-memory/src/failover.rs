@@ -8,10 +8,10 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use temm1e_core::error::Temm1eError;
-use temm1e_core::{Memory, MemoryEntry, SearchOpts};
 use std::collections::HashMap;
 use std::sync::Arc;
+use temm1e_core::error::Temm1eError;
+use temm1e_core::{Memory, MemoryEntry, SearchOpts};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
@@ -322,11 +322,7 @@ impl Memory for ResilientMemory {
         }
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        opts: SearchOpts,
-    ) -> Result<Vec<MemoryEntry>, Temm1eError> {
+    async fn search(&self, query: &str, opts: SearchOpts) -> Result<Vec<MemoryEntry>, Temm1eError> {
         match self.primary.search(query, opts.clone()).await {
             Ok(mut results) => {
                 self.record_success().await;
@@ -501,8 +497,8 @@ impl Memory for ResilientMemory {
 mod tests {
     use super::*;
     use chrono::Utc;
-    use temm1e_core::MemoryEntryType;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use temm1e_core::MemoryEntryType;
 
     // -- Test helpers -------------------------------------------------------
 

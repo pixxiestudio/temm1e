@@ -49,9 +49,7 @@ pub const METRIC_MEMORY_OPS: &str = "temm1e.memory.operations";
 /// - If `config.otel_enabled` is `true` **and** `config.otel_endpoint` is
 ///   `Some(endpoint)`, returns an [`OtelExporter`] targeting that endpoint.
 /// - Otherwise returns a plain in-process [`MetricsCollector`].
-pub fn create_observable(
-    config: &ObservabilityConfig,
-) -> Result<Box<dyn Observable>, Temm1eError> {
+pub fn create_observable(config: &ObservabilityConfig) -> Result<Box<dyn Observable>, Temm1eError> {
     if config.otel_enabled {
         if let Some(ref endpoint) = config.otel_endpoint {
             let exporter = OtelExporter::new(endpoint)?;

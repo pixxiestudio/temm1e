@@ -171,11 +171,7 @@ impl Memory for MockMemory {
         Ok(())
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        opts: SearchOpts,
-    ) -> Result<Vec<MemoryEntry>, Temm1eError> {
+    async fn search(&self, query: &str, opts: SearchOpts) -> Result<Vec<MemoryEntry>, Temm1eError> {
         let entries = self.entries.lock().await;
         let results: Vec<MemoryEntry> = entries
             .iter()

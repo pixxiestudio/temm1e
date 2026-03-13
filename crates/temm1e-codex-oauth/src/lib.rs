@@ -56,10 +56,7 @@ pub async fn login(headless: bool) -> Result<TokenStore, Temm1eError> {
 }
 
 /// Browser-based login: opens browser + local callback server.
-async fn login_browser(
-    pkce: &pkce::PkceChallenge,
-    state: &str,
-) -> Result<TokenStore, Temm1eError> {
+async fn login_browser(pkce: &pkce::PkceChallenge, state: &str) -> Result<TokenStore, Temm1eError> {
     // Find port and build redirect_uri before starting server
     let port = find_available_port()?;
     let redirect_uri = format!("http://localhost:{}/auth/callback", port);
