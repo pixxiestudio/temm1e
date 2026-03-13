@@ -1,7 +1,7 @@
-# V2 Agentic Core — Experiment Insights & Future Improvements
+# V2 Tem's Mind — Experiment Insights & Future Improvements
 
 **Date:** 2026-03-10
-**Related:** [Benchmark Report](AGENTIC_CORE_V2_BENCHMARK_TOOLS.md) | [v1 log](benchmark_v2_tools_v1_log.txt) | [v2 log](benchmark_v2_tools_v2_log.txt)
+**Related:** [Benchmark Report](TEMS_MIND_V2_BENCHMARK_TOOLS.md) | [v1 log](benchmark_v2_tools_v1_log.txt) | [v2 log](benchmark_v2_tools_v2_log.txt)
 
 ---
 
@@ -125,5 +125,5 @@ Trivial/Simple tiers show ~0% savings because smart LLMs (GPT-5.2) already don't
 
 ---
 
-*Insights from TEMM1E Agentic Core v2.0 A/B benchmark experiment*
+*Insights from TEMM1E Tem's Mind v2.0 A/B benchmark experiment*
 *Date: 2026-03-10*

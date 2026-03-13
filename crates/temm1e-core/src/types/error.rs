@@ -52,7 +52,7 @@ pub enum Temm1eError {
     Internal(String),
 }
 
-// ── Structured Failure Types (Agentic Core v2.0) ─────────────────────
+// ── Structured Failure Types (Tem's Mind v2.0) ─────────────────────
 
 /// Category of failure encountered during tool execution or verification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

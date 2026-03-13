@@ -129,7 +129,7 @@ Post-session    |  9.8     | cleanup  | MCP detached, GC-equivalent drop
 | Errors | 0 |
 | Panics | 0 |
 
-### V2 Agentic Core Behavior
+### V2 Tem's Mind Behavior
 
 - **Turn 1:** LLM classifier categorized as `Chat/Simple` → single API call, no tools
 - **Turn 2:** LLM classifier categorized as `Chat/Simple` → arithmetic answered directly
@@ -196,4 +196,4 @@ Post-session    |  9.8     | cleanup  | MCP detached, GC-equivalent drop
 
 4. **MCP adds tools, not overhead.** Loading 22 Playwright tools via MCP added <1 MB to RSS. The MCP bridge is a thin adapter, not a heavy subsystem.
 
-5. **Cost per conversation is sub-cent.** 3 turns with classification + completion = $0.001. The V2 agentic core's single-call classification keeps costs minimal.
+5. **Cost per conversation is sub-cent.** 3 turns with classification + completion = $0.001. The V2 Tem's Mind's single-call classification keeps costs minimal.

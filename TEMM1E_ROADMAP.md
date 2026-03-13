@@ -7,7 +7,7 @@
 - **Innovation Score**: 1–10. How novel is this relative to existing agent runtimes (OpenClaw, ZeroClaw, OpenHands, etc.)?
 - **Risk**: `LOW` → well-understood, isolated change. `MEDIUM` → cross-cutting or requires design decisions. `HIGH` → architectural, may need iteration. `CRITICAL` → could destabilize existing functionality.
 
-**Current state:** TEMM1E is a production-ready single-instance Telegram agent with Anthropic/OpenAI providers, 8 tools, SQLite/Markdown memory, heartbeat, and local vault. The Agentic Core runs ORDER → THINK → ACTION but lacks explicit VERIFY, task persistence, and self-correction. ~10.6K LOC Rust.
+**Current state:** TEMM1E is a production-ready single-instance Telegram agent with Anthropic/OpenAI providers, 8 tools, SQLite/Markdown memory, heartbeat, and local vault. The Tem's Mind runs ORDER → THINK → ACTION but lacks explicit VERIFY, task persistence, and self-correction. ~10.6K LOC Rust.
 
 ---
 
@@ -91,9 +91,9 @@ Current limits: `max_turns=6`, `max_tool_rounds=50`. The Vision demands no task 
 
 ---
 
-## Phase 1 — The Agentic Core
+## Phase 1 — The Tem's Mind
 
-*Pillar: Agentic Core, Autonomy. This is the heart of TEMM1E. Everything else serves it.*
+*Pillar: Tem's Mind, Autonomy. This is the heart of TEMM1E. Everything else serves it.*
 
 ### 1.1 Verification Engine — Explicit Post-Action Verification ✓ DONE (2026-03-08)
 
@@ -108,7 +108,7 @@ The current loop is ORDER → THINK → ACTION → THINK → ACTION. There is no
 | **User Value** | `CRITICAL` — Without verification, the agent builds on failed steps. A failed `git push` followed by "deployment complete" is worse than no automation. |
 | **Innovation** | 8/10 — Most agent runtimes trust tool output implicitly. Structured verification is a significant differentiator. Closest analogy: formal proof assistants, but applied to LLM agents. |
 | **Risk** | `MEDIUM` — Adds latency (one extra reasoning step per action). Must be tuned to avoid verification of trivial actions (e.g., reading a file). Token cost increases ~20-30%. |
-| **Pillar** | Agentic Core |
+| **Pillar** | Tem's Mind |
 
 ### 1.2 Task Decomposition — Compound Orders to Task Graphs ✓ DONE (2026-03-08)
 
@@ -124,7 +124,7 @@ Currently every user message is one task. "Deploy the app, run migrations, verif
 | **User Value** | `HIGH` — Users naturally give compound orders. Decomposition makes the agent reliable on complex work. |
 | **Innovation** | 7/10 — Few runtimes decompose into DAGs. Most use flat chains. DAG decomposition with LLM-driven planning is cutting edge. |
 | **Risk** | `HIGH` — Task graph management is complex. DAG cycles, failed dependencies, partial completion — all need handling. Start simple: linear decomposition first, DAG later. |
-| **Pillar** | Agentic Core, Autonomy |
+| **Pillar** | Tem's Mind, Autonomy |
 
 ### 1.3 Persistent Task Queue with Checkpointing ✓ DONE (2026-03-08)
 
@@ -140,7 +140,7 @@ Tasks currently live in memory. Process restart = all tasks lost. The Vision dem
 | **User Value** | `CRITICAL` — A deploy that restarts TEMM1E currently kills all running tasks. Users must re-issue orders. Directly violates Pillar II (Robustness). |
 | **Innovation** | 6/10 — Process-level task persistence is uncommon in agent runtimes. Most assume ephemeral sessions. |
 | **Risk** | `HIGH` — Serializing/deserializing agent state (conversation history, tool context, pending messages) is non-trivial. Schema must handle version migration. |
-| **Pillar** | Robustness, Agentic Core |
+| **Pillar** | Robustness, Tem's Mind |
 
 ### 1.4 Context Manager — Surgical Token Budgeting ✓ DONE (2026-03-08)
 
@@ -156,7 +156,7 @@ The current context builder loads full conversation history up to `max_context_t
 | **User Value** | `HIGH` — Better context management means the agent remembers what matters and forgets what doesn't. Directly improves task success rate on long sessions. |
 | **Innovation** | 7/10 — Most runtimes use simple sliding window. Priority-based budgeting with summarization is advanced. |
 | **Risk** | `MEDIUM` — Summarization costs tokens itself. Need a fast/cheap model for summaries or a heuristic approach. Token counting must match the provider's tokenizer. |
-| **Pillar** | Brutal Efficiency, Agentic Core |
+| **Pillar** | Brutal Efficiency, Tem's Mind |
 
 ### 1.5 Self-Correction — Retry with Alternative Strategy ✓ DONE (2026-03-08)
 
@@ -172,7 +172,7 @@ When a tool fails, the agent currently retries the same approach or gives up. Th
 | **User Value** | `HIGH` — Users currently see the agent bang its head against the same wall. Self-correction turns failures into solved problems. |
 | **Innovation** | 8/10 — Explicit strategy rotation with failure memory is rare. Most runtimes rely on the LLM's implicit reasoning, which often loops. |
 | **Risk** | `MEDIUM` — Risk of the agent trying worse strategies. Needs a "strategy quality" heuristic. Token cost increases on failure paths. |
-| **Pillar** | Autonomy, Agentic Core |
+| **Pillar** | Autonomy, Tem's Mind |
 
 ### 1.6 DONE Definition Engine ✓ DONE (2026-03-08)
 
@@ -188,7 +188,7 @@ The Vision states: "DONE is not a feeling. It is a measurable state." Currently,
 | **User Value** | `CRITICAL` — Users need to trust that "done" means done. Currently, the agent sometimes declares success on partially completed work. |
 | **Innovation** | 9/10 — Explicit, verifiable DONE criteria with automated checking is genuinely novel. No mainstream agent runtime does this. |
 | **Risk** | `MEDIUM` — DONE criteria generation is LLM-dependent. Poorly defined criteria lead to false positives or infinite loops. Needs prompt engineering iteration. |
-| **Pillar** | Agentic Core |
+| **Pillar** | Tem's Mind |
 
 ### 1.7 Cross-Task Learning ✓ DONE (2026-03-08)
 
@@ -204,7 +204,7 @@ The agent currently has no memory across tasks beyond raw conversation history. 
 | **User Value** | `HIGH` — The agent gets smarter over time. The 10th deployment is faster than the 1st. Users feel the agent "knows their setup." |
 | **Innovation** | 8/10 — Structured learning from execution history is research-grade. Most agents start fresh every conversation. |
 | **Risk** | `MEDIUM` — Stale or wrong learnings can degrade performance. Needs a relevance scoring mechanism and a way for users to clear bad learnings. |
-| **Pillar** | Agentic Core, Elegance |
+| **Pillar** | Tem's Mind, Elegance |
 
 ---
 
@@ -261,7 +261,7 @@ The current heartbeat reads `HEARTBEAT.md` and sends it to the agent. It doesn't
 | **User Value** | `MEDIUM` — Users don't see the heartbeat directly, but a health-aware heartbeat prevents silent degradation. |
 | **Innovation** | 6/10 — Self-diagnosing heartbeats are an elegant extension of the existing system. |
 | **Risk** | `LOW` — Additive to existing heartbeat. No breaking changes. |
-| **Pillar** | Robustness, Agentic Core |
+| **Pillar** | Robustness, Tem's Mind |
 
 ### 2.4 Memory Backend Failover ✓ DONE (2026-03-08)
 
@@ -299,7 +299,7 @@ Tool outputs are currently truncated at 30KB. A 29KB log dump is sent raw to the
 | **User Value** | `HIGH` — Compressed outputs mean the agent can handle more tool rounds before hitting context limits. More rounds = more complex tasks completed. |
 | **Innovation** | 7/10 — Most runtimes do naive truncation. Intelligent compression with retrievable raw output is a meaningful advance. |
 | **Risk** | `MEDIUM` — Over-compression loses critical information. Under-compression wastes tokens. The heuristic needs tuning per tool type. |
-| **Pillar** | Brutal Efficiency, Agentic Core |
+| **Pillar** | Brutal Efficiency, Tem's Mind |
 
 ### 3.2 System Prompt Optimization ✓ DONE (2026-03-08)
 
@@ -347,7 +347,7 @@ History is currently kept on a sliding window (oldest dropped first). Important 
 | **User Value** | `HIGH` — The agent remembers important decisions even in long sessions. Users don't need to repeat themselves. |
 | **Innovation** | 7/10 — Importance-based pruning is discussed in research but rarely implemented in production agents. |
 | **Risk** | `MEDIUM` — Importance scoring is subjective. A bad scorer drops critical context. Needs conservative defaults. |
-| **Pillar** | Brutal Efficiency, Agentic Core |
+| **Pillar** | Brutal Efficiency, Tem's Mind |
 
 ### 3.5 Binary and Startup Optimization ✓ DONE (2026-03-08)
 
@@ -411,7 +411,7 @@ Load and execute user-defined skills from Markdown files with YAML frontmatter. 
 | **User Value** | `MEDIUM` — Power users can extend the agent with domain-specific knowledge. Not needed for basic use. |
 | **Innovation** | 5/10 — OpenClaw has a skill system. TEMM1E's version is simpler but safer (sandbox enforcement). |
 | **Risk** | `MEDIUM` — Skill injection into prompts can conflict with system instructions. Needs priority/override rules. |
-| **Pillar** | Elegance, Agentic Core |
+| **Pillar** | Elegance, Tem's Mind |
 
 ### 4.4 Slack Channel ✓ DONE (2026-03-08)
 
@@ -515,9 +515,9 @@ Implement the `Orchestrator` trait for Kubernetes and Docker. Auto-provision age
 
 ---
 
-## Phase 6 — Advanced Agentic Core ✓ COMPLETE (2026-03-08)
+## Phase 6 — Advanced Tem's Mind ✓ COMPLETE (2026-03-08)
 
-*Pillar: Agentic Core, Innovation. Push the frontier of what autonomous agents can do.*
+*Pillar: Tem's Mind, Innovation. Push the frontier of what autonomous agents can do.*
 
 ### 6.1 Parallel Tool Execution ✓ DONE (2026-03-08)
 
@@ -533,7 +533,7 @@ Currently tools execute sequentially within a round. Independent tools (e.g., re
 | **User Value** | `HIGH` — Multi-file reads, parallel shell commands, concurrent API checks — all become faster. Reduces wall-clock time for complex tasks by 2-5x. |
 | **Innovation** | 6/10 — Some runtimes support this but most don't. Clean implementation in a single-binary agent is notable. |
 | **Risk** | `MEDIUM` — Race conditions if tools share state (e.g., two shell commands writing to the same file). Needs dependency analysis. |
-| **Pillar** | Brutal Efficiency, Agentic Core |
+| **Pillar** | Brutal Efficiency, Tem's Mind |
 
 ### 6.2 Agent-to-Agent Delegation ✓ DONE (2026-03-08)
 
@@ -549,7 +549,7 @@ For complex tasks, the primary agent spawns a sub-agent with a scoped objective.
 | **User Value** | `HIGH` — Complex tasks (e.g., "refactor the codebase and update all tests") benefit from divide-and-conquer. |
 | **Innovation** | 9/10 — Multi-agent orchestration within a single runtime is frontier territory. Most multi-agent systems are framework-level (LangGraph, CrewAI). TEMM1E doing this natively in Rust is novel. |
 | **Risk** | `HIGH` — Agent coordination is hard. Sub-agents can conflict, loop, or produce inconsistent results. Needs strict scoping and a clear aggregation protocol. |
-| **Pillar** | Agentic Core, Autonomy |
+| **Pillar** | Tem's Mind, Autonomy |
 
 ### 6.3 Proactive Task Initiation ✓ DONE (2026-03-08)
 
@@ -565,7 +565,7 @@ The agent currently only acts on user messages and heartbeats. It never initiate
 | **User Value** | `HIGH` — Transforms TEMM1E from reactive (waits for orders) to proactive (anticipates needs). This is the difference between a tool and an assistant. |
 | **Innovation** | 8/10 — Event-driven agent initiation is rare in current runtimes. Most are purely conversational. |
 | **Risk** | `HIGH` — Proactive agents that act without user input can cause damage. Needs strict guardrails: action requires user confirmation for destructive operations, rate limits on proactive actions. |
-| **Pillar** | Agentic Core, Autonomy |
+| **Pillar** | Tem's Mind, Autonomy |
 
 ### 6.4 Adaptive System Prompt — Self-Tuning Agent ✓ DONE (2026-03-08)
 
@@ -581,14 +581,14 @@ The system prompt is currently static. The agent can't modify its own instructio
 | **User Value** | `MEDIUM` — The agent improves its own performance over time. But users may not notice the subtle improvements. |
 | **Innovation** | 9/10 — Self-modifying agent instructions based on execution experience is research-grade. Very few systems attempt this. |
 | **Risk** | `CRITICAL` — Self-modification can degrade performance or introduce unsafe behaviors. Requires user approval gate and easy rollback. Prompt drift is a real concern. |
-| **Pillar** | Agentic Core, Brutal Efficiency |
+| **Pillar** | Tem's Mind, Brutal Efficiency |
 
 ---
 
 ## Dependency Graph
 
 ```
-Phase 0 (Foundation)           Phase 1 (Agentic Core)         Phase 2 (Self-Healing)
+Phase 0 (Foundation)           Phase 1 (Tem's Mind)         Phase 2 (Self-Healing)
 ┌─────────────────┐            ┌─────────────────┐            ┌─────────────────┐
 │ 0.1 Graceful    │───────────▶│ 1.3 Task Queue  │───────────▶│ 2.2 State       │
 │     Shutdown    │            │     + Checkpoint │            │     Recovery    │
@@ -667,13 +667,13 @@ Independent tracks that can proceed in parallel:
 | 0.3 | Channel Reconnect | CRITICAL | 2 | LOW | Robustness | ✓ DONE |
 | 0.4 | Streaming Responses | HIGH | 4 | MEDIUM | Elegance | ✓ DONE |
 | 0.5 | Raise Limits | CRITICAL | 5 | LOW | Autonomy | ✓ DONE |
-| 1.1 | Verification Engine | CRITICAL | 8 | MEDIUM | Agentic Core | ✓ DONE |
-| 1.2 | Task Decomposition | HIGH | 7 | HIGH | Agentic Core | ✓ DONE |
+| 1.1 | Verification Engine | CRITICAL | 8 | MEDIUM | Tem's Mind | ✓ DONE |
+| 1.2 | Task Decomposition | HIGH | 7 | HIGH | Tem's Mind | ✓ DONE |
 | 1.3 | Persistent Task Queue | CRITICAL | 6 | HIGH | Robustness | ✓ DONE |
 | 1.4 | Context Manager | HIGH | 7 | MEDIUM | Brutal Efficiency | ✓ DONE |
 | 1.5 | Self-Correction | HIGH | 8 | MEDIUM | Autonomy | ✓ DONE |
-| 1.6 | DONE Definition | CRITICAL | 9 | MEDIUM | Agentic Core | ✓ DONE |
-| 1.7 | Cross-Task Learning | HIGH | 8 | MEDIUM | Agentic Core | ✓ DONE |
+| 1.6 | DONE Definition | CRITICAL | 9 | MEDIUM | Tem's Mind | ✓ DONE |
+| 1.7 | Cross-Task Learning | HIGH | 8 | MEDIUM | Tem's Mind | ✓ DONE |
 | 2.1 | Watchdog | HIGH | 5 | LOW | Robustness | ✓ DONE |
 | 2.2 | State Recovery | CRITICAL | 7 | HIGH | Robustness | ✓ DONE |
 | 2.3 | Health-Aware Heartbeat | MEDIUM | 6 | LOW | Robustness | ✓ DONE |
@@ -694,9 +694,9 @@ Independent tracks that can proceed in parallel:
 | 5.4 | OAuth Identity | MEDIUM | 7 | HIGH | Elegance | ✓ DONE |
 | 5.5 | Orchestrator | LOW | 5 | CRITICAL | Robustness | ✓ DONE |
 | 6.1 | Parallel Tools | HIGH | 6 | MEDIUM | Brutal Efficiency | ✓ DONE |
-| 6.2 | Agent Delegation | HIGH | 9 | HIGH | Agentic Core |
-| 6.3 | Proactive Initiation | HIGH | 8 | HIGH | Agentic Core |
-| 6.4 | Self-Tuning Prompt | MEDIUM | 9 | CRITICAL | Agentic Core |
+| 6.2 | Agent Delegation | HIGH | 9 | HIGH | Tem's Mind |
+| 6.3 | Proactive Initiation | HIGH | 8 | HIGH | Tem's Mind |
+| 6.4 | Self-Tuning Prompt | MEDIUM | 9 | CRITICAL | Tem's Mind |
 
 ---
 
@@ -705,7 +705,7 @@ Independent tracks that can proceed in parallel:
 **Immediate** (unblocks everything else):
 `0.5` → `0.3` → `0.1` → `0.2`
 
-**Next** (the Agentic Core — TEMM1E's differentiator):
+**Next** (the Tem's Mind — TEMM1E's differentiator):
 `1.1` → `1.6` → `1.5` → `1.3` → `1.4` → `1.7`
 
 **Parallel track** (efficiency + ecosystem, no dependencies on Phase 1):

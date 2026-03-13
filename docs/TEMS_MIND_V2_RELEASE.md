@@ -1,6 +1,6 @@
-# TEMM1E v2.0 — Smarter Agentic Core
+# TEMM1E v2.0 — Smarter Tem's Mind
 
-TEMM1E v2.0 introduces a smarter agentic core that understands **what kind of task you're asking** before it starts working. The result: fewer unnecessary API calls, lower costs on complex tasks, and the same response quality you're used to.
+TEMM1E v2.0 introduces a smarter Tem's Mind that understands **what kind of task you're asking** before it starts working. The result: fewer unnecessary API calls, lower costs on complex tasks, and the same response quality you're used to.
 
 ---
 
@@ -84,7 +84,7 @@ Tested with OpenAI GPT-5.2, 20 turns covering:
 
 Both versions ran in parallel with isolated workspaces, fresh state, identical prompts.
 
-Full technical report: [Benchmark Report](AGENTIC_CORE_V2_BENCHMARK_TOOLS.md)
+Full technical report: [Benchmark Report](TEMS_MIND_V2_BENCHMARK_TOOLS.md)
 Terminal logs: [v1](benchmark_v2_tools_v1_log.txt) | [v2](benchmark_v2_tools_v2_log.txt)
 
 ---

@@ -73,7 +73,7 @@ pub struct AgentRuntime {
     budget: BudgetTracker,
     /// Pricing for the current model.
     model_pricing: ModelPricing,
-    /// Whether v2 agentic core optimizations are enabled.
+    /// Whether v2 Tem's Mind optimizations are enabled.
     /// When true: complexity classification, prompt stratification,
     /// structured failure injection, and trivial fast-path.
     v2_optimizations: bool,
@@ -205,7 +205,7 @@ impl AgentRuntime {
         self
     }
 
-    /// Enable or disable v2 agentic core optimizations.
+    /// Enable or disable v2 Tem's Mind optimizations.
     /// When enabled: complexity-aware prompt tiers, trivial fast-path,
     /// structured failure classification, and complexity-scaled output caps.
     pub fn with_v2_optimizations(mut self, enabled: bool) -> Self {

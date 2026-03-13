@@ -393,7 +393,7 @@ pub struct AgentConfig {
     /// Maximum total USD spend allowed per session (0.0 = unlimited).
     #[serde(default = "default_max_spend_usd")]
     pub max_spend_usd: f64,
-    /// Enable v2 agentic core optimizations: complexity classification,
+    /// Enable v2 Tem's Mind optimizations: complexity classification,
     /// prompt stratification, structured failures, trivial fast-path.
     /// Default: true (v2 behavior). Set to false to revert to v1 behavior.
     #[serde(default = "default_v2_optimizations")]

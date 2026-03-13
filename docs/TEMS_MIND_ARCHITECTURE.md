@@ -1,4 +1,4 @@
-# TEMM1E Agentic Core Architecture
+# TEMM1E Tem's Mind Architecture
 
 > The cognitive engine behind TEMM1E's autonomous execution.
 

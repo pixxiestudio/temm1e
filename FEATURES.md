@@ -64,7 +64,7 @@
 | 5.4 | OAuth Identity Flows | `temm1e-gateway/src/identity.rs` | Done |
 | 5.5 | Horizontal Scaling via Orchestrator | `temm1e-core/src/orchestrator_impl.rs` | Done |
 
-## Phase 6 — The Advanced Agentic Core (where it gets interesting >:3)
+## Phase 6 — The Advanced Tem's Mind (where it gets interesting >:3)
 
 | # | Feature | Module | Status |
 |---|---------|--------|--------|

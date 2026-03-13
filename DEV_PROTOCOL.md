@@ -38,7 +38,7 @@ Empty allowlists deny everyone. Numeric IDs only — never usernames. Path trave
 temm1e (binary)                    src/main.rs — CLI, onboarding, agent init
 ├── temm1e-core         (traits)   13 trait definitions, types, errors, config
 ├── temm1e-gateway      (http)     axum server, health, identity, OAuth
-├── temm1e-agent        (brain)    AGENTIC CORE — 20 autonomy modules
+├── temm1e-agent        (brain)    TEM'S MIND — 20 autonomy modules
 ├── temm1e-providers    (llm)      Anthropic, OpenAI-compat (6 providers)
 ├── temm1e-channels     (io)       Telegram, Discord, Slack, CLI
 ├── temm1e-memory       (storage)  SQLite + Markdown with failover
@@ -536,4 +536,4 @@ tail -f /tmp/temm1e.log
 |---------|------|-----------|
 | 1.2.0 | 2026-03-09 | Stealth browser, session persistence, credential deletion, 1012 tests |
 | 1.1.0 | 2026-03-08 | 6 LLM providers, hot-reload, channel docs |
-| 1.0.0 | 2026-03-08 | AGENTIC CORE, 35 features, vision support, 905 tests |
+| 1.0.0 | 2026-03-08 | TEM'S MIND, 35 features, vision support, 905 tests |

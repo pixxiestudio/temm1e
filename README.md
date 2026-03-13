@@ -17,7 +17,7 @@
 
 # TEMM1E
 
-hOI!! I'm Temm1e! With a one! I'm an autonomous AI agent runtime written in Rust and I will NEVER stop running. Deploy me once and I stay up forever. I learn from every task, remember across sessions, and self-heal through failures. My brain has a BUDGET and I am VERY responsible with it.
+Hi! I'm Temm1e. With a one. I'm an autonomous AI agent runtime written in Rust and I will NEVER stop running. Deploy me once and I stay up forever. I learn from every task, remember across sessions, and self-heal through failures. My brain has a BUDGET and I am VERY responsible with it.
 
 Most runtimes treat the LLM as a text generator. I treat it as a finite brain. Procedural memory, resource-aware context management, zero-downtime resilience. That's me. That's what I do.
 
@@ -212,7 +212,7 @@ Plus Z.ai and MiniMax via config. 50+ models in the registry with per-model cont
 temm1e (binary)
 ├── temm1e-core         Shared traits (13), types, config, errors
 ├── temm1e-gateway      HTTP server, health, dashboard, OAuth identity
-├── temm1e-agent        AGENTIC CORE — 25 modules including blueprint system + executable DAG
+├── temm1e-agent        TEM'S MIND — 25 modules including blueprint system + executable DAG
 ├── temm1e-providers    Anthropic + OpenAI-compatible (7 providers via one adapter)
 ├── temm1e-codex-oauth  ChatGPT Plus/Pro via OAuth PKCE
 ├── temm1e-channels     Telegram, Discord, Slack, CLI
@@ -290,7 +290,7 @@ Every version of me, from first breath to right now:
                     │
 2026-03-11  v2.0.1  ●━━━ LLM chat/order classification — single LLM call classifies AND responds (chat = 1 call, order = instant ack + pipeline), abolished artificial tool iteration caps (budget + time are the guardrails), temm1e update command, 1217 tests
                     │
-2026-03-10  v2.0.0  ●━━━ AGENTIC CORE V2 — smart complexity classification (Trivial/Simple/Standard/Complex), prompt stratification (4 tiers), complexity-aware tool loop, execution profiles, structured failure types, 12% cheaper on compound tasks, 14% fewer tool calls, zero quality regression. Benchmarked: 20-turn A/B on GPT-5.2, 100% classification accuracy, 100% reliability. 1141 tests
+2026-03-10  v2.0.0  ●━━━ TEM'S MIND V2 — smart complexity classification (Trivial/Simple/Standard/Complex), prompt stratification (4 tiers), complexity-aware tool loop, execution profiles, structured failure types, 12% cheaper on compound tasks, 14% fewer tool calls, zero quality regression. Benchmarked: 20-turn A/B on GPT-5.2, 100% classification accuracy, 100% reliability. 1141 tests
                     │
 2026-03-10  v1.7.0  ●━━━ Vision fallback & /model command — graceful image stripping for text-only models, /model mechanical switching with instant reload, model validation, hot-reload auto-revert, proxy provider flexibility, 1141 tests
                     │
@@ -308,7 +308,7 @@ Every version of me, from first breath to right now:
                     │
 2026-03-08  v1.1.0  ●━━━ Provider expansion — 6 LLM providers, hot-reload, channel docs, path fixes
                     │
-2026-03-08  v1.0.0  ●━━━ AGENTIC CORE — 35 features, 20 autonomy modules, vision support, 905 tests
+2026-03-08  v1.0.0  ●━━━ TEM'S MIND — 35 features, 20 autonomy modules, vision support, 905 tests
                     │
 2026-03-08  v0.9.0  ●━━━ Production hardening — Dockerfile, systemd, CI/CD, multi-user support
                     │

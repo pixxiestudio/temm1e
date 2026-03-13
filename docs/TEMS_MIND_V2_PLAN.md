@@ -1,4 +1,4 @@
-# TEMM1E Agentic Core v2.0 — Implementation Plan
+# TEMM1E Tem's Mind v2.0 — Implementation Plan
 
 **Author:** Tung + Claude (harmonized from RFC + codebase analysis + Claude Code ecosystem research)
 **Date:** 2026-03-10
@@ -15,7 +15,7 @@ Every optimization must pass this test: "Does the user notice any degradation?" 
 
 ### Goal 2: Resilience — Zero Dead-Ends, Zero Silent Failures
 
-The agentic core must be self-sustaining. Every failure path must have a recovery path. No operation can leave the system in an unrecoverable state. If something fails, the user gets told, the system recovers, and the next message works. This extends TEMM1E's existing 4-layer resilience architecture (source elimination, catch_unwind, dead worker detection, global panic hook) into the agentic decision layer.
+The Tem's Mind must be self-sustaining. Every failure path must have a recovery path. No operation can leave the system in an unrecoverable state. If something fails, the user gets told, the system recovers, and the next message works. This extends TEMM1E's existing 4-layer resilience architecture (source elimination, catch_unwind, dead worker detection, global panic hook) into the agentic decision layer.
 
 ---
 
@@ -239,7 +239,7 @@ For a 7-step task: ~18K tokens total vs ~56K without checkpointing (67% reductio
 
 ### Design Principle: Every Path Must Recover
 
-The agentic core has three categories of failure, each with a mandatory recovery strategy:
+The Tem's Mind has three categories of failure, each with a mandatory recovery strategy:
 
 ### Layer 1: Infrastructure Failures (Provider, Network, System)
 
