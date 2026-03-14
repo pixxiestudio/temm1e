@@ -413,7 +413,13 @@ Requires Rust 1.82+ and Chrome/Chromium (for the browser tool).
 
 <p align="center">
 
-[![Star History Chart](https://api.star-history.com/svg?repos=nagisanzenin/temm1e&type=Date)](https://www.star-history.com/?repos=nagisanzenin%2Ftemm1e&type=date&legend=top-left)
+<a href="https://www.star-history.com/?repos=nagisanzenin%2Ftemm1e&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=nagisanzenin/temm1e&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=nagisanzenin/temm1e&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=nagisanzenin/temm1e&type=date&legend=top-left" />
+ </picture>
+</a>
 
 </p>
 
