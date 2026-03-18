@@ -79,26 +79,72 @@ That's it. Restart TEMM1E and the system begins collecting training data from ev
 
 ---
 
-## Choose a Base Model (Optional)
+## Choose a Base Model
 
-By default, Eigen-Tune auto-selects the best model for your hardware. To see options or set a specific model:
+Eigen-Tune needs a base model to fine-tune. You pick the model. Ollama is the model registry — whatever you pull into Ollama is available for Eigen-Tune.
+
+### Step 1: Browse and pull a model
+
+Visit [ollama.com/library](https://ollama.com/library) to see all available models. Then pull one:
+
+```bash
+# Small (8 GB RAM) — fast training, good for testing
+ollama pull smollm2:135m
+ollama pull qwen2.5:0.5b
+
+# Medium (16 GB RAM) — good balance
+ollama pull qwen2.5:1.5b
+ollama pull phi3.5:3.8b
+ollama pull llama3.1:8b
+
+# Large (32 GB+ RAM) — best quality
+ollama pull mistral-small:24b
+ollama pull qwen2.5:32b
+```
+
+Any model Ollama supports works. When new models release (Llama 4, Qwen3, etc.), just `ollama pull` them — no TEMM1E update needed.
+
+### Step 2: Set the model in TEMM1E
 
 ```
-/eigentune model              Show available models for your hardware
-/eigentune model auto         Let system pick (default)
-/eigentune model <name>       Set a specific model
+/eigentune model                    Show what's available
+/eigentune model llama3.1:8b        Set a specific model
+/eigentune model auto               Let system pick based on your hardware
 ```
 
-**Recommendations by hardware:**
+Or in `temm1e.toml`:
 
-| RAM | Recommended | Why |
-|-----|------------|-----|
-| 8 GB | SmolLM2-135M | Fastest training, proof of concept |
-| 8 GB | Qwen2.5-0.5B | Slightly better quality |
-| 16 GB | Qwen2.5-1.5B | Good balance of speed and quality |
-| 16 GB | Llama-3.1-8B | Maximum capability for 16 GB |
-| 32 GB | Mistral-Small-24B | Strong quality, needs more RAM |
-| 48 GB+ | Qwen2.5-32B | Best possible local model |
+```toml
+[eigentune]
+enabled = true
+base_model = "llama3.1:8b"     # any model name from ollama list
+```
+
+### Step 3: There is no step 3
+
+The system handles everything else. Your model choice only affects what base model gets fine-tuned. The training data, quality scoring, graduation gates, and monitoring are all automatic.
+
+### Recommendations by hardware
+
+| RAM | Model | Training time (1000 examples) | Inference |
+|-----|-------|------|-----------|
+| 8 GB | smollm2:135m | ~10 min | ~200 tok/s |
+| 8 GB | qwen2.5:0.5b | ~20 min | ~150 tok/s |
+| 16 GB | qwen2.5:1.5b | ~40 min | ~80 tok/s |
+| 16 GB | llama3.1:8b | ~2 hours | ~30 tok/s |
+| 32 GB | mistral-small:24b | ~4 hours | ~15 tok/s |
+| 48 GB+ | qwen2.5:32b | ~6 hours | ~10 tok/s |
+
+Bigger models produce better results but train slower and run slower. Start small, upgrade when you have the data to justify it.
+
+### Important: Ollama IS the model registry
+
+Eigen-Tune does not maintain its own model list. Ollama is the source of truth. This means:
+
+- **New models:** `ollama pull <new-model>` makes it instantly available. No TEMM1E update required.
+- **Custom models:** If you have a GGUF file from any source, import it via `ollama create mymodel -f Modelfile`. Eigen-Tune can fine-tune it.
+- **Model updates:** `ollama pull llama3.1:8b` always gets the latest version. Re-run training to use it.
+- **No lock-in:** Switch models anytime with `/eigentune model <name>`. Previous training data is preserved and can be used with the new model.
 
 ---
 
