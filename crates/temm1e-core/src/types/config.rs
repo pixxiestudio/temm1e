@@ -66,6 +66,46 @@ pub struct Temm1eConfig {
     pub observability: ObservabilityConfig,
     #[serde(default)]
     pub gaze: GazeConfig,
+    #[serde(default)]
+    pub awareness: AwarenessConfig,
+}
+
+/// Tem Aware configuration — consciousness observer sub-agent.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AwarenessConfig {
+    /// Enable consciousness observation. Off by default.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Minimum confidence to inject a whisper (0.0-1.0).
+    #[serde(default = "default_awareness_confidence")]
+    pub confidence_threshold: f64,
+    /// Maximum interventions per session.
+    #[serde(default = "default_awareness_max_interventions")]
+    pub max_interventions_per_session: u32,
+    /// Observation mode: "rules_first", "always_llm", "rules_only".
+    #[serde(default = "default_awareness_observation_mode")]
+    pub observation_mode: String,
+}
+
+impl Default for AwarenessConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            confidence_threshold: default_awareness_confidence(),
+            max_interventions_per_session: default_awareness_max_interventions(),
+            observation_mode: default_awareness_observation_mode(),
+        }
+    }
+}
+
+fn default_awareness_confidence() -> f64 {
+    0.7
+}
+fn default_awareness_max_interventions() -> u32 {
+    10
+}
+fn default_awareness_observation_mode() -> String {
+    "rules_first".into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -883,6 +923,7 @@ mod tests {
             tunnel: None,
             observability: ObservabilityConfig::default(),
             gaze: GazeConfig::default(),
+            awareness: AwarenessConfig::default(),
         };
 
         let toml_str = toml::to_string(&config).unwrap();
