@@ -60,7 +60,15 @@ case "$ARCH" in
     *)             error "Unsupported architecture: $ARCH. TEMM1E supports x86_64 and aarch64." ;;
 esac
 
-ARTIFACT="${BINARY_NAME}-${ARCH_TAG}-${PLATFORM}"
+# On Linux, prefer the desktop binary (includes computer use / desktop control).
+# Fall back to the server binary if desktop variant isn't available.
+if [ "$PLATFORM" = "linux" ]; then
+    ARTIFACT="${BINARY_NAME}-${ARCH_TAG}-${PLATFORM}-desktop"
+    FALLBACK_ARTIFACT="${BINARY_NAME}-${ARCH_TAG}-${PLATFORM}"
+else
+    ARTIFACT="${BINARY_NAME}-${ARCH_TAG}-${PLATFORM}"
+    FALLBACK_ARTIFACT=""
+fi
 
 info "Detected: ${PLATFORM} ${ARCH_TAG}"
 
@@ -84,7 +92,18 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 info "Downloading ${ARTIFACT}..."
 if ! curl -sSfL -o "${TMPDIR}/${ARTIFACT}" "$DOWNLOAD_URL"; then
-    error "Download failed. Binary may not exist for your platform (${ARTIFACT})."
+    if [ -n "$FALLBACK_ARTIFACT" ]; then
+        info "Desktop binary not available, trying server binary..."
+        ARTIFACT="$FALLBACK_ARTIFACT"
+        DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ARTIFACT}"
+        if ! curl -sSfL -o "${TMPDIR}/${ARTIFACT}" "$DOWNLOAD_URL"; then
+            error "Download failed. Binary may not exist for your platform (${ARTIFACT})."
+        fi
+        info "Note: Server binary installed (no desktop control). For desktop control, build from source:"
+        info "  cargo install --git https://github.com/${REPO}"
+    else
+        error "Download failed. Binary may not exist for your platform (${ARTIFACT})."
+    fi
 fi
 
 # Verify checksum

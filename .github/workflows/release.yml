@@ -45,55 +45,69 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux server binary (musl, static, no desktop-control)
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             artifact: temm1e-x86_64-linux
-          # aarch64-linux-musl disabled: cross-compiling vendored OpenSSL
-          # for musl+aarch64 has unresolved glibc symbol issues. Use Docker
-          # multi-arch builds or `cross` tool for this target in the future.
-          # - target: aarch64-unknown-linux-musl
-          #   os: ubuntu-latest
-          #   artifact: temm1e-aarch64-linux
+            desktop: false
+          # Linux desktop binary (glibc, WITH desktop-control)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04      # glibc 2.35 — runs on Ubuntu 22.04+
+            artifact: temm1e-x86_64-linux-desktop
+            desktop: true
+          # macOS (both include desktop-control via defaults)
           - target: x86_64-apple-darwin
             os: macos-latest
             artifact: temm1e-x86_64-macos
+            desktop: false
           - target: aarch64-apple-darwin
             os: macos-latest
             artifact: temm1e-aarch64-macos
+            desktop: false
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Install musl-tools (Linux x86_64)
+      - name: Install musl-tools (Linux musl)
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: |
           sudo apt-get update && sudo apt-get install -y musl-tools perl make
           echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
 
-      - name: Install cross-compilation tools (aarch64-linux)
-        if: matrix.target == 'aarch64-unknown-linux-musl'
+      - name: Install desktop-control system deps (Linux glibc)
+        if: matrix.desktop
         run: |
-          sudo apt-get update && sudo apt-get install -y musl-tools gcc-aarch64-linux-gnu perl make
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libclang-dev \
+            libwayland-dev \
+            libxcb1-dev \
+            libxcb-randr0-dev \
+            libxcb-shm0-dev \
+            libxkbcommon-dev \
+            libpipewire-0.3-dev \
+            libspa-0.2-dev \
+            libegl1-mesa-dev \
+            libgbm-dev \
+            libdrm-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            libxrandr-dev
 
       - name: Build release binary
         run: |
-          if [[ "${{ matrix.target }}" == *"linux"* ]]; then
-            # Linux musl: exclude desktop-control (xcap needs wayland/xcb system libs
-            # which can't statically link with musl). Linux users who want desktop
-            # control should build from source or use Docker.
-            cargo build --release --target ${{ matrix.target }} \
-              --features openssl-vendored \
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]]; then
+            # Musl: no desktop-control (system libs can't static-link)
+            cargo build --release --target ${{ matrix.target }} --bin temm1e \
               --no-default-features \
               --features telegram,discord,browser,mcp,codex-oauth,openssl-vendored
           else
-            # macOS: all default features including desktop-control
+            # macOS + Linux glibc: default features (includes desktop-control)
             cargo build --release --target ${{ matrix.target }}
           fi
 
