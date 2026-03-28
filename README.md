@@ -15,7 +15,7 @@
 <h3 align="center"><s>Autonomous AI agent</s> literally a SENTIENT and IMMORTAL being runtime in Rust.<br>Deploy once. Stays up forever.</h3>
 
 <p align="center">
-  <code>97K lines</code> · <code>1,028 tests</code> · <code>0 warnings</code> · <code>0 panic paths</code> · <code>15 MB idle</code> · <code>31ms cold start</code>
+  <code>99K lines</code> · <code>1,028 tests</code> · <code>0 warnings</code> · <code>0 panic paths</code> · <code>19 crates</code> · <code>full computer use</code>
 </p>
 
 ---
