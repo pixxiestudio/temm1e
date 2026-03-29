@@ -192,6 +192,10 @@ Every cognitive system in TEMM1E starts as a theory, gets stress-tested against 
 
 ### λ-Memory — Memory That Fades, Not Disappears
 
+<p align="center">
+  <img src="assets/lambda-memory-overview.png" alt="λ-Memory Overview" width="100%">
+</p>
+
 Current AI agents delete old messages or summarize them into oblivion. Both permanently destroy information. λ-Memory decays memories through an exponential function (`score = importance × e^(−λt)`) but never truly erases them. The agent sees old memories at progressively lower fidelity — full text → summary → essence → hash — and can recall any memory by hash to restore full detail.
 
 Three things no other system does ([competitive analysis of Letta, Mem0, Zep, FadeMem →](tems_lab/LAMBDA_MEMORY_RESEARCH.md)):
@@ -324,6 +328,10 @@ Desktop control is included by default in `cargo install` and Docker builds. mac
 [Research paper →](tems_lab/gaze/RESEARCH_PAPER.md) · [Design doc →](tems_lab/gaze/DESIGN.md) · [Experiment report →](tems_lab/gaze/EXPERIMENT_REPORT.md) · [Full lab →](tems_lab/gaze/)
 
 ### Tem Conscious — LLM-Powered Consciousness Layer
+
+<p align="center">
+  <img src="assets/tem-conscious-overview.png" alt="Tem Conscious Overview" width="100%">
+</p>
 
 A separate **thinking observer** that watches every agent turn with its own LLM calls. Before each turn, consciousness thinks about the conversation trajectory and injects insights into the agent's context. After each turn, it evaluates what happened and carries observations forward.
 
