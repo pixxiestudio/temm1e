@@ -521,6 +521,36 @@ impl AgentRuntime {
                                 content: MessageContent::Text(classification.chat_text.clone()),
                             });
 
+                            // ── Tem Aware: post-observe Chat turns too ──
+                            if let Some(ref awareness) = self.awareness {
+                                let obs = crate::awareness::TurnObservation {
+                                    turn_number: turn_api_calls,
+                                    session_id: session.session_id.clone(),
+                                    user_message_preview: crate::awareness::safe_preview(
+                                        &user_text, 200,
+                                    ),
+                                    category: "Chat".to_string(),
+                                    difficulty: format!("{:?}", classification.difficulty),
+                                    model_used: self.model.clone(),
+                                    input_tokens: turn_input_tokens,
+                                    output_tokens: turn_output_tokens,
+                                    cost_usd: turn_cost_usd,
+                                    cumulative_cost_usd: self.budget.total_spend_usd(),
+                                    budget_limit_usd: self.budget.max_spend_usd(),
+                                    tools_called: vec![],
+                                    tool_results: vec![],
+                                    max_consecutive_failures: 0,
+                                    strategy_rotations: 0,
+                                    response_preview: crate::awareness::safe_preview(
+                                        &classification.chat_text,
+                                        200,
+                                    ),
+                                    circuit_breaker_state: "active".to_string(),
+                                    previous_notes: awareness.session_notes(),
+                                };
+                                awareness.post_observe(&obs).await;
+                            }
+
                             return Ok((
                                 OutboundMessage {
                                     chat_id: msg.chat_id.clone(),
