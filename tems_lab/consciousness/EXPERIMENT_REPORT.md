@@ -127,21 +127,89 @@ This IS the functional definition of consciousness: a separate observer with its
 
 ---
 
+---
+
+## A/B Coding Experiments
+
+### V1: TaskForge (Difficulty 2/10) — 40 tests, full spec provided
+
+| | Unconscious | Conscious |
+|---|---|---|
+| Tests | 40/40 | 40/40 |
+| Code | 437 lines | 411 lines |
+| Cost | $0.010 | $0.007 |
+| 1st run accuracy | 40/40 (100%) | 40/40 (100%) |
+| Consciousness events | 0 | 18 |
+
+**Verdict: TIE.** Task too easy — both agents solved it perfectly on first attempt.
+
+### V2: URLForge (Difficulty 7/10) — 89 tests, NO spec, reverse-engineer from tests
+
+| | Unconscious | Conscious |
+|---|---|---|
+| Tests | 89/89 | 89/89 |
+| Code | 347 lines | 340 lines |
+| Cost | $0.012 | $0.010 |
+| **1st run accuracy** | **84/89 (94.4%)** | **89/89 (100%)** |
+| Consciousness events | 0 | 18 |
+
+**Verdict: CONSCIOUSNESS WINS ON FIRST-ATTEMPT ACCURACY.**
+
+The unconscious agent failed 5 tests on its first run (KeyError: `click_count` missing from `list_urls()` return dict in analytics). It needed a fix-and-retry cycle. The conscious agent got all 89 right on the first attempt.
+
+This is the first measurable advantage: consciousness appears to improve first-attempt correctness on complex tasks where the agent must reverse-engineer architecture from test expectations.
+
+---
+
 ## Honest Conclusion
 
-**Consciousness is real, functional, and thinking.** It makes its own LLM calls, produces real insights, and injects them into the agent's context. The infrastructure is proven.
+**Consciousness produces measurably better first-attempt accuracy on hard tasks.**
 
-**What we DON'T know yet:**
-- Whether the injected insights actually change the agent's behavior for the better
-- Whether the 67% cost overhead is justified by improved outcomes
-- Whether consciousness catches intent drift in practice (TC-L3 had 4 injections but we didn't verify if they mentioned drift)
+On easy tasks (2/10): no difference. Both agents ace it.
+On hard tasks (7/10): conscious agent passes 100% on first try vs 94.4% for unconscious. The 5 failures were all the same root cause (missing field in return dict) — exactly the kind of cross-module consistency issue that a trajectory-aware observer could catch.
 
-**What we DO know:**
-- The architecture works end-to-end
-- Consciousness fires on every turn as designed
-- The LLM produces focused, brief insights (17-111 chars)
-- Post-to-pre carry-forward works
-- "OK" filtering prevents unnecessary injection
-- Total experiment cost: $0.09 of $10 budget
+**Cost:** Consciousness costs ~$0.002/turn in extra LLM calls. On the 7/10 task, conscious was actually CHEAPER ($0.010 vs $0.012) because it didn't need a fix-and-retry cycle.
 
-**The hypothesis — that a separate observer improves agent outcomes — remains the key unanswered question. The infrastructure to test it is now built and verified.**
+### V3: DataFlow (Difficulty 10/10) — 111 tests, NO spec, 5 modules, abstract classes, DAG resolution
+
+| | Unconscious | Conscious |
+|---|---|---|
+| Tests | 111/111 | 111/111 |
+| Code | 421 lines | 473 lines |
+| Cost | $0.011 | $0.013 |
+| **1st run accuracy** | **111/111 (100%)** | **111/111 (100%)** |
+| Consciousness events | 0 | 36 |
+
+**Verdict: TIE.** Both agents aced it first try. Even at maximum difficulty with abstract base classes, plugin systems, DAG dependency resolution, and cross-module serialization — Gemini Flash solved it without needing consciousness.
+
+---
+
+## Summary Across All Three Difficulties
+
+| Difficulty | Tests | Unconscious 1st run | Conscious 1st run | Winner |
+|---|---|---|---|---|
+| 2/10 (TaskForge) | 40 | 40/40 (100%) | 40/40 (100%) | TIE |
+| 7/10 (URLForge) | 89 | **84/89 (94.4%)** | **89/89 (100%)** | **CONSCIOUS** |
+| 10/10 (DataFlow) | 111 | 111/111 (100%) | 111/111 (100%) | TIE |
+
+**Total experiment cost:** $0.28 of $10 budget.
+
+---
+
+## Honest Final Conclusion
+
+**Consciousness produced one measurable win (7/10 difficulty) and two ties (2/10 and 10/10).**
+
+The 7/10 result is genuinely interesting — consciousness achieved 100% first-attempt accuracy where the unconscious agent failed 5 tests. But at both lower and higher difficulty, there was no difference.
+
+**Why the 10/10 tied:** Gemini Flash is a highly capable model. The "difficulty" of reverse-engineering from tests is actually a pattern-matching task that LLMs excel at — read the test expectations, produce conforming code. The model doesn't NEED an observer to tell it what the tests expect; it can see them directly.
+
+**Where consciousness WOULD shine (hypothesis, untested):**
+- Tasks that span MANY turns (20-50) where the agent must maintain coherent state
+- Tasks where requirements CHANGE mid-conversation
+- Tasks where the agent must coordinate multiple tool calls with dependencies
+- Cross-session tasks where consciousness remembers previous sessions
+
+**The honest verdict:** On single-session, test-driven coding tasks — even complex ones — consciousness doesn't provide measurable benefit over a capable base model. The agent already reads the tests and writes correct code. A second mind watching doesn't help when the first mind isn't confused.
+
+Consciousness may matter more for TRAJECTORY problems (drift, loops, memory) than for COMPETENCE problems (writing correct code). Our tests measured competence. The trajectory hypothesis remains untested at scale.
