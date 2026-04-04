@@ -436,6 +436,45 @@ That's it. Vigil handles everything else: log scanning, triage, credential scrub
 
 [Research paper →](tems_lab/vigil/RESEARCH_PAPER.md) · [Design →](tems_lab/vigil/DESIGN.md) · [Full lab →](tems_lab/vigil/)
 
+### Tem Anima — Emotional Intelligence That Grows
+
+Most AI assistants are born fresh every conversation — no scars, no growth, no memory of who you are. Tem Anima changes that. It builds a psychological profile of each user over time and adapts communication style accordingly, while maintaining its own identity and values.
+
+**How it works:**
+- **Code collects facts** every message (word count, punctuation, pace — pure Rust, ~1ms, no LLM)
+- **LLM evaluates** every N turns in the background (structured JSON profile update with confidence + reasoning)
+- **Profile shapes communication** via system prompt injection (~100-200 tokens, confidence-gated)
+- **Adaptive N** — starts at 5 turns (cold start), grows logarithmically as profile stabilizes, resets on behavioral shift
+
+**What it tracks (6 communication dimensions + OCEAN + trust + relationship phase):**
+
+| Dimension | What It Tells Tem |
+|-----------|-------------------|
+| Directness | Skip preamble (high) vs. provide context first (low) |
+| Verbosity | One-liner responses (low) vs. thorough explanations (high) |
+| Technical depth | Summaries (low) vs. code and specifics (high) |
+| Analytical vs. emotional | Lead with facts (high) vs. lead with empathy (low) |
+| Trust | Earned through interaction, breaks 3x faster than it builds |
+| Relationship phase | Discovery → Calibration → Partnership → Deep Partnership |
+
+**A/B tested on 50 turns with 2 polar-opposite personas (Gemini 3 Flash):**
+
+| Dimension | Terse Tech Lead | Curious Student | Delta |
+|-----------|:---:|:---:|:---:|
+| Directness | **1.00** | 0.63 | +0.37 |
+| Verbosity | **0.10** | **0.47** | -0.37 |
+| Analytical | **0.92** | **0.40** | +0.52 |
+| Technical depth | **0.72** | **0.30** | +0.42 |
+| Trust | 0.52 | **0.77** | -0.25 |
+
+**Anti-sycophancy by design:** The Firewall Rule — user mood shapes Tem's *words*, never Tem's *work*. Consciousness gets zero user emotional state. Tem won't cut corners because you're in a hurry, won't skip tests because you're frustrated, won't agree with bad ideas because you're the boss.
+
+**Configurable personality:** Ships with stock Tem (personality.toml + soul.md). Users can customize name, traits, values, mode expressions — but honesty is structural, not optional.
+
+**Resilience (run-forever safe):** WAL mode, busy timeout, concurrent eval guard, 30s eval timeout, facts buffer cap (30), evaluation log GC (100/user), observations GC (200/user), confidence decay on stale dimensions.
+
+[Architecture →](tems_lab/social/TEM_EMOTIONAL_INTELLIGENCE_ARCHITECTURE.md) · [A/B test report →](tems_lab/social/AB_TEST_REPORT_R2.md) · [Research (150+ sources) →](tems_lab/social/EMOTIONAL_INTELLIGENCE_RESEARCH.md) · [Full lab →](tems_lab/social/)
+
 ---
 
 ## Interactive TUI

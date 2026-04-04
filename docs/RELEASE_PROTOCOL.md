@@ -60,6 +60,7 @@ version = "X.Y.Z"
 | Line ~425 | `temm1e update` example version | Match Cargo.toml version |
 | Line ~443 | Dev section test count | From step 2 |
 | Release Timeline | New entry at TOP | Date, version, features, test count |
+| **Tem's Lab section** | Add subsection for new cognitive systems | If the release adds a new cognitive system (crate in temm1e-*), add a Tem's Lab subsection with: what it does, how it works, key metrics/benchmarks, A/B test results if applicable, and links to research papers/design docs. Follow the existing subsection format (see Lambda Memory, Conscious, Perpetuum as examples). |
 
 ### 5. CLAUDE.md — Update Stale References
 
