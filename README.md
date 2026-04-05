@@ -483,6 +483,10 @@ Most AI assistants are born fresh every conversation — no scars, no growth, no
 
 ### TemDOS — Specialist Sub-Agent Cores
 
+<p align="center">
+  <img src="assets/temdos-overview.png" alt="TemDOS Overview" width="100%">
+</p>
+
 Most AI agents are generalists — they do everything themselves, polluting their context window with research that should have been delegated. TemDOS (Tem Delegated Operating Subsystem) introduces specialist sub-agent cores, inspired by GLaDOS's personality core architecture from Portal. A central consciousness with specialist modules that feed information back. The main agent is the decision-maker. Cores are experts that inform but never steer.
 
 **How it works:**
