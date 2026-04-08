@@ -30,4 +30,7 @@ urlencoding = { workspace = true }
 
 [dev-dependencies]
 temm1e-test-utils = { path = "../temm1e-test-utils" }
+temm1e-skills = { path = "../temm1e-skills" }
+temm1e-providers = { path = "../temm1e-providers" }
 tokio = { workspace = true, features = ["test-util"] }
+tempfile = "3"

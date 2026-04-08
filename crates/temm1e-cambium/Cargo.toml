@@ -1,0 +1,23 @@
+[package]
+name = "temm1e-cambium"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Self-grow pipeline: gap-driven code evolution with verification harness"
+
+[dependencies]
+temm1e-core = { path = "../temm1e-core" }
+async-trait.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+chrono = { workspace = true, features = ["serde"] }
+dirs.workspace = true
+sha2 = "0.10"
+tokio = { workspace = true, features = ["fs", "process", "time", "sync"] }
+tracing.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tempfile = "3"

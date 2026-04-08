@@ -74,6 +74,8 @@ pub struct Temm1eConfig {
     pub vigil: VigilConfig,
     #[serde(default)]
     pub social: SocialConfig,
+    #[serde(default)]
+    pub cambium: CambiumConfig,
 }
 
 /// Social intelligence configuration — user profiling and emotional intelligence.
@@ -110,6 +112,79 @@ impl Default for SocialConfig {
             turn_interval: default_social_turn_interval(),
             min_interval_seconds: default_social_min_interval(),
             max_buffer_turns: default_social_max_buffer(),
+        }
+    }
+}
+
+/// Cambium configuration — gap-driven code evolution.
+///
+/// Cambium is the layer where Tem grows new capabilities at the edge while
+/// the heartwood (immutable kernel) stays stable. Named after the biological
+/// cambium — the thin layer of growth tissue under tree bark where new wood
+/// is added each year.
+///
+/// **Enabled by default.** Users can opt out via `/cambium off` slash
+/// command at runtime, or set `enabled = false` in `[cambium]` section of
+/// the config file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CambiumConfig {
+    /// Master switch. When false, no cambium activity occurs.
+    /// Default: true (enabled).
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// Maximum lines of code changed per cambium session.
+    #[serde(default = "default_sg_max_lines")]
+    pub max_lines_per_session: usize,
+    /// Maximum files touched per cambium session.
+    #[serde(default = "default_sg_max_files")]
+    pub max_files_per_session: usize,
+    /// Maximum cambium sessions per 24-hour period.
+    #[serde(default = "default_sg_max_sessions")]
+    pub max_sessions_per_day: usize,
+    /// Cooldown in seconds between cambium sessions.
+    #[serde(default = "default_sg_cooldown")]
+    pub cooldown_secs: u64,
+    /// Cooldown in seconds after a failed session.
+    #[serde(default = "default_sg_failure_cooldown")]
+    pub failure_cooldown_secs: u64,
+    /// Trust level override. None = use earned trust state machine.
+    #[serde(default)]
+    pub trust_level_override: Option<String>,
+    /// Path to codebase self-model docs (relative to workspace root).
+    #[serde(default = "default_sg_self_model_path")]
+    pub self_model_path: String,
+}
+
+fn default_sg_max_lines() -> usize {
+    500
+}
+fn default_sg_max_files() -> usize {
+    5
+}
+fn default_sg_max_sessions() -> usize {
+    3
+}
+fn default_sg_cooldown() -> u64 {
+    3600
+}
+fn default_sg_failure_cooldown() -> u64 {
+    86400
+}
+fn default_sg_self_model_path() -> String {
+    "docs/lab/cambium".to_string()
+}
+
+impl Default for CambiumConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_lines_per_session: default_sg_max_lines(),
+            max_files_per_session: default_sg_max_files(),
+            max_sessions_per_day: default_sg_max_sessions(),
+            cooldown_secs: default_sg_cooldown(),
+            failure_cooldown_secs: default_sg_failure_cooldown(),
+            trust_level_override: None,
+            self_model_path: default_sg_self_model_path(),
         }
     }
 }
@@ -1051,6 +1126,7 @@ mod tests {
             perpetuum: PerpetualConfig::default(),
             vigil: VigilConfig::default(),
             social: SocialConfig::default(),
+            cambium: CambiumConfig::default(),
         };
 
         let toml_str = toml::to_string(&config).unwrap();
@@ -1374,6 +1450,78 @@ mod tests {
         // Full config with no tools section should default to 0 (persistent browser)
         let config = Temm1eConfig::default();
         assert_eq!(config.tools.browser_timeout_secs, 0);
+    }
+
+    // ── Cambium Config tests ──────────────────────────────────────────
+
+    #[test]
+    fn cambium_config_default_is_enabled() {
+        let config = CambiumConfig::default();
+        assert!(config.enabled, "Cambium should be enabled by default");
+        assert_eq!(config.max_lines_per_session, 500);
+        assert_eq!(config.max_files_per_session, 5);
+        assert_eq!(config.max_sessions_per_day, 3);
+        assert_eq!(config.cooldown_secs, 3600);
+        assert_eq!(config.failure_cooldown_secs, 86400);
+        assert!(config.trust_level_override.is_none());
+        assert_eq!(config.self_model_path, "docs/lab/cambium");
+    }
+
+    #[test]
+    fn config_without_cambium_section_defaults_to_enabled() {
+        let toml_str = r#"
+            [gateway]
+            port = 8080
+        "#;
+        let config: Temm1eConfig = toml::from_str(toml_str).unwrap();
+        // No [cambium] section -> defaults apply -> enabled = true
+        assert!(config.cambium.enabled);
+        assert_eq!(config.cambium.max_lines_per_session, 500);
+    }
+
+    #[test]
+    fn config_can_explicitly_disable_cambium() {
+        let toml_str = r#"
+            [cambium]
+            enabled = false
+        "#;
+        let config: Temm1eConfig = toml::from_str(toml_str).unwrap();
+        assert!(!config.cambium.enabled);
+    }
+
+    #[test]
+    fn config_with_cambium_section_parses() {
+        let toml_str = r#"
+            [cambium]
+            enabled = true
+            max_lines_per_session = 200
+        "#;
+        let config: Temm1eConfig = toml::from_str(toml_str).unwrap();
+        assert!(config.cambium.enabled);
+        assert_eq!(config.cambium.max_lines_per_session, 200);
+        assert_eq!(config.cambium.max_sessions_per_day, 3);
+    }
+
+    #[test]
+    fn cambium_config_serde_roundtrip() {
+        let config = CambiumConfig {
+            enabled: true,
+            max_lines_per_session: 300,
+            max_files_per_session: 10,
+            max_sessions_per_day: 5,
+            cooldown_secs: 1800,
+            failure_cooldown_secs: 43200,
+            trust_level_override: Some("approval_required".to_string()),
+            self_model_path: "docs/cambium".to_string(),
+        };
+        let toml_str = toml::to_string(&config).unwrap();
+        let restored: CambiumConfig = toml::from_str(&toml_str).unwrap();
+        assert!(restored.enabled);
+        assert_eq!(restored.max_lines_per_session, 300);
+        assert_eq!(
+            restored.trust_level_override.as_deref(),
+            Some("approval_required")
+        );
     }
 
     #[test]

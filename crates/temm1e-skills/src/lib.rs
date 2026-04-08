@@ -87,6 +87,17 @@ impl SkillRegistry {
         Ok(())
     }
 
+    /// Reload all skills from disk. Safe to call at runtime — clears
+    /// the in-memory list and re-scans both directories. Returns the
+    /// number of skills loaded.
+    ///
+    /// Used by cambium to pick up newly created skill files without
+    /// requiring a binary restart.
+    pub async fn reload(&mut self) -> Result<usize, Temm1eError> {
+        self.load_skills().await?;
+        Ok(self.skills.len())
+    }
+
     /// Look up a skill by exact name.
     pub fn get_skill(&self, name: &str) -> Option<&Skill> {
         self.skills.iter().find(|s| s.name == name)
@@ -499,6 +510,32 @@ mod tests {
         registry.load_skills().await.unwrap();
         assert_eq!(registry.list_skills().len(), 1);
         assert_eq!(registry.list_skills()[0].name, "second");
+    }
+
+    #[tokio::test]
+    async fn test_reload_picks_up_new_skill() {
+        let tmp = tempdir().unwrap();
+        let skills_dir = tmp.path().join("skills");
+        std_fs::create_dir_all(&skills_dir).unwrap();
+
+        let mut registry = SkillRegistry::new(tmp.path().to_path_buf());
+        let initial = registry.reload().await.unwrap();
+        assert_eq!(initial, 0);
+
+        // Simulate cambium writing a new skill file at runtime.
+        write_skill_file(
+            &skills_dir,
+            "fresh.md",
+            "fresh",
+            "Freshly grown skill",
+            &["fresh"],
+            "1.0.0",
+            "Body.",
+        );
+
+        let after = registry.reload().await.unwrap();
+        assert_eq!(after, 1);
+        assert!(registry.get_skill("fresh").is_some());
     }
 
     #[tokio::test]

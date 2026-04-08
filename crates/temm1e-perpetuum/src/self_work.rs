@@ -39,6 +39,13 @@ pub async fn execute_self_work(
                 Ok("Skipped: no LLM caller available".to_string())
             }
         }
+        SelfWorkKind::CambiumSkills => {
+            if let Some(caller) = caller {
+                grow_skills(store, caller).await
+            } else {
+                Ok("Skipped: no LLM caller available".to_string())
+            }
+        }
     }
 }
 
@@ -279,6 +286,201 @@ async fn run_vigil(store: &Arc<Store>, caller: &Arc<dyn LlmCaller>) -> Result<St
     ))
 }
 
+/// Skill-layer cambium growth: analyze recent activity for unmet capability
+/// gaps, then write reusable skill files to `~/.temm1e/skills/`.
+///
+/// Rate limited to once per 24 hours. The handler is gated by
+/// `cambium.enabled = true` at the call site (concern dispatch). When
+/// disabled, this function is never invoked.
+///
+/// Output skill files use the TEMM1E native format (YAML frontmatter +
+/// markdown body) and are picked up by `SkillRegistry::reload()` without
+/// requiring a binary restart.
+async fn grow_skills(
+    store: &Arc<Store>,
+    caller: &Arc<dyn LlmCaller>,
+) -> Result<String, Temm1eError> {
+    // Rate limit: max 1 skill-grow session per 24 hours.
+    if let Ok(notes) = store.get_volition_notes(20).await {
+        for note in &notes {
+            if let Some(ts_str) = note.strip_prefix("cambium_grow_last:") {
+                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts_str.trim()) {
+                    let elapsed = chrono::Utc::now() - dt.with_timezone(&chrono::Utc);
+                    if elapsed < chrono::Duration::hours(24) {
+                        return Ok(format!(
+                            "Skill grow: rate limited ({}h since last)",
+                            elapsed.num_hours()
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    // Collect recent activity for gap analysis.
+    let notes = store.get_volition_notes(20).await.unwrap_or_default();
+    if notes.is_empty() {
+        return Ok("Skill grow: no recent activity to analyze".to_string());
+    }
+
+    let activity_text = notes.join("\n- ");
+    let system = "You are analyzing recent agent activity to identify reusable \
+                  skill opportunities. A skill is a markdown procedure for handling \
+                  a specific task type. Only suggest skills for patterns that appeared \
+                  3+ times. Respond with a JSON array of skills, each with fields \
+                  'name' (kebab-case), 'description' (one line), 'capabilities' (array \
+                  of keywords), and 'instructions' (markdown body). If no patterns \
+                  warrant a skill, return an empty array []. Respond with ONLY the \
+                  JSON, no prose.";
+
+    let prompt = format!(
+        "Recent activity notes:\n- {activity_text}\n\n\
+         Identify reusable skill opportunities. Return JSON array."
+    );
+
+    let response = caller.call(Some(system), &prompt).await?;
+    let extracted = extract_json_array(&response);
+
+    // Parse the response.
+    let suggestions: Vec<SkillSuggestion> = match serde_json::from_str(extracted) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(
+                target: "perpetuum",
+                error = %e,
+                response = %response,
+                extracted = %extracted,
+                "Skill grow: failed to parse LLM response, skipping"
+            );
+            return Ok("Skill grow: LLM response unparseable".to_string());
+        }
+    };
+
+    if suggestions.is_empty() {
+        // Still record timestamp so we don't re-run for 24h.
+        store
+            .save_volition_note(
+                &format!("cambium_grow_last:{}", chrono::Utc::now().to_rfc3339()),
+                "self_work",
+            )
+            .await?;
+        return Ok("Skill grow: no skill opportunities found".to_string());
+    }
+
+    // Write each skill to ~/.temm1e/skills/cambium-<name>.md
+    // Test override: set TEMM1E_CAMBIUM_SKILLS_DIR to redirect skill output
+    // to a controlled directory. Production never sets this and uses
+    // ~/.temm1e/skills/.
+    let skills_dir = if let Ok(override_path) = std::env::var("TEMM1E_CAMBIUM_SKILLS_DIR") {
+        std::path::PathBuf::from(override_path)
+    } else {
+        match dirs::home_dir() {
+            Some(home) => home.join(".temm1e").join("skills"),
+            None => {
+                return Ok("Skill grow: cannot resolve home directory".to_string());
+            }
+        }
+    };
+
+    if let Err(e) = tokio::fs::create_dir_all(&skills_dir).await {
+        return Err(Temm1eError::Tool(format!(
+            "Failed to create skills directory: {e}"
+        )));
+    }
+
+    let mut written = 0;
+    for suggestion in &suggestions {
+        // Sanitize name for filesystem safety.
+        let safe_name: String = suggestion
+            .name
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect();
+        if safe_name.is_empty() {
+            continue;
+        }
+
+        let filename = format!("cambium-{safe_name}.md");
+        let path = skills_dir.join(&filename);
+
+        let caps_yaml: String = suggestion
+            .capabilities
+            .iter()
+            .map(|c| format!("  - {c}\n"))
+            .collect();
+
+        let content = format!(
+            "---\nname: {}\ndescription: {}\ncapabilities:\n{}version: 1.0.0\n---\n{}\n",
+            suggestion.name, suggestion.description, caps_yaml, suggestion.instructions
+        );
+
+        if let Err(e) = tokio::fs::write(&path, content).await {
+            tracing::warn!(
+                target: "perpetuum",
+                error = %e,
+                path = %path.display(),
+                "Skill grow: failed to write skill file"
+            );
+            continue;
+        }
+        written += 1;
+        tracing::info!(
+            target: "perpetuum",
+            path = %path.display(),
+            "Skill grow: wrote skill file"
+        );
+    }
+
+    // Record timestamp for rate limiting.
+    store
+        .save_volition_note(
+            &format!("cambium_grow_last:{}", chrono::Utc::now().to_rfc3339()),
+            "self_work",
+        )
+        .await?;
+
+    Ok(format!(
+        "Skill grow: analyzed {} notes, wrote {} skill file(s)",
+        notes.len(),
+        written
+    ))
+}
+
+/// LLM response shape for skill suggestions.
+#[derive(serde::Deserialize)]
+struct SkillSuggestion {
+    name: String,
+    description: String,
+    capabilities: Vec<String>,
+    instructions: String,
+}
+
+/// Extract a JSON array from an LLM response that may be wrapped in
+/// markdown code fences or surrounded by prose. Returns the substring
+/// from the first `[` to the matching last `]` if both are present;
+/// otherwise returns the trimmed input.
+///
+/// This handles real-world LLM behavior:
+/// - Plain JSON: `[{"name": ...}]`
+/// - Markdown-fenced: ```` ```json\n[...]\n``` ````
+/// - Prose-wrapped: `Sure, here are the skills:\n[...]\nThat's all.`
+fn extract_json_array(response: &str) -> &str {
+    let trimmed = response.trim();
+    // Find first '[' and last ']'.
+    let start = trimmed.find('[');
+    let end = trimmed.rfind(']');
+    match (start, end) {
+        (Some(s), Some(e)) if e > s => &trimmed[s..=e],
+        _ => trimmed,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,5 +505,49 @@ mod tests {
         let result = execute_self_work(&SelfWorkKind::FailureAnalysis, &store, None).await;
         assert!(result.is_ok());
         assert!(result.unwrap().contains("Skipped"));
+    }
+
+    #[tokio::test]
+    async fn cambium_skills_no_llm_skips_gracefully() {
+        let store = Arc::new(Store::new("sqlite::memory:").await.unwrap());
+        let result = execute_self_work(&SelfWorkKind::CambiumSkills, &store, None).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("Skipped"));
+    }
+
+    #[test]
+    fn extract_json_array_plain() {
+        let input = r#"[{"name":"x"}]"#;
+        assert_eq!(extract_json_array(input), input);
+    }
+
+    #[test]
+    fn extract_json_array_markdown_fenced() {
+        let input = "```json\n[{\"name\":\"x\"}]\n```";
+        assert_eq!(extract_json_array(input), r#"[{"name":"x"}]"#);
+    }
+
+    #[test]
+    fn extract_json_array_prose_wrapped() {
+        let input = "Here are the skills:\n[{\"name\":\"x\"}]\nLet me know if you need more.";
+        assert_eq!(extract_json_array(input), r#"[{"name":"x"}]"#);
+    }
+
+    #[test]
+    fn extract_json_array_empty_array() {
+        assert_eq!(extract_json_array("[]"), "[]");
+        assert_eq!(extract_json_array("```\n[]\n```"), "[]");
+    }
+
+    #[test]
+    fn extract_json_array_nested_brackets() {
+        let input = r#"[{"caps":["a","b"]}]"#;
+        assert_eq!(extract_json_array(input), input);
+    }
+
+    #[test]
+    fn extract_json_array_no_brackets_returns_input() {
+        let input = "no json here";
+        assert_eq!(extract_json_array(input), "no json here");
     }
 }
