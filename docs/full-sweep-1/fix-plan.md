@@ -126,27 +126,39 @@
 
 ---
 
-## Deferred List
+## Deferred → Resolved
 
-Items below did not reach 100% confidence / 0% risk. They remain as research artifacts in `wave-2b-research.md` and will be revisited in the next sweep or when prerequisites are met.
+All 15 deferred items have been deep-researched and dispositioned:
 
-| ID | Fix | Confidence | Blocker |
-|----|-----|-----------|---------|
-| SWEEP-018 | Rate limit retry w/ jitter | 70% | 6 call sites in runtime.rs, needs CompletionRequest Clone, timing analysis |
-| SWEEP-227 | Wire Watchdog into production | 65% | Multi-file coordinated change (runtime + main + gateway), CancellationToken |
-| SWEEP-703 | Shell tool sandbox | 50% | Architecture decision (denylist vs container), shell parsing dependency |
-| SWEEP-408 | WhatsApp Web reconnection loop | 60% | Needs understanding of whatsapp-web.rs bot lifecycle, reconnect semantics |
-| SWEEP-502 | Markdown backend file locking | 60% | Cross-platform file locking behavior differs, needs testing |
-| SWEEP-605 | Encrypt OAuth tokens via Vault | 55% | Vault integration for token_store.rs, migration of existing plaintext tokens |
-| SWEEP-209 | Per-chat channel try_send | 65% | Touches dispatcher loop (Agentic Core DIRECT), overflow queue design |
-| SWEEP-017 | Memory entries: separate from system role | 40% | Architectural change to context builder, affects all memory injection |
-| SWEEP-215 | Empty env var → None in config | 60% | Config semantics change, test documents current behavior as intentional |
-| SWEEP-503 | Failover search semantics | 55% | Needs word-split AND matching implementation in fallback cache |
-| SWEEP-504 | Lambda store transaction wrapping | 60% | sqlx transaction API, potential deadlock with FTS5 |
-| SWEEP-009 | Cambium deploy catch_unwind | 55% | Deploy pipeline has rollback logic that must be preserved across unwind |
-| SWEEP-204 | Circuit breaker CAS | 65% | Touches Agentic Core DIRECT, needs concurrent test verification |
-| SWEEP-406 | Slack pagination | 60% | Cursor-based pagination API, needs Slack API documentation review |
-| SWEEP-221 | Wire ResilientMemory into main.rs | 55% | Multi-crate wiring, needs to not break existing memory flow |
+### IMPLEMENTED (confirmed 100% confidence after research)
+
+| ID | Fix | Commit |
+|----|-----|--------|
+| SWEEP-215 | Filter empty keys in `all_keys()` | 32c1652 |
+| SWEEP-504 | Lambda store transaction wrapping | 32c1652 |
+| SWEEP-503 | Failover search word-split AND matching | 32c1652 |
+| SWEEP-502 | Markdown atomic append (OpenOptions) | 32c1652 |
+| SWEEP-204 | Circuit breaker CAS | Already implemented (code already had compare_exchange) |
+| SWEEP-209 | Per-chat channel capacity | Already 32 (sweep finding was incorrect) |
+
+### BIN (impossible to reach 100/0 — research proved why)
+
+| ID | Fix | Reason |
+|----|-----|--------|
+| SWEEP-009 | Cambium deploy catch_unwind | No panic paths exist (all ops use `?`). Rollback state unreachable from catch_unwind wrapper. |
+| SWEEP-408 | WhatsApp Web reconnection | `bot.run()` consumes internal state via `.take()`. Cannot re-run. LoggedOut requires QR scan. |
+| SWEEP-605 | Encrypt OAuth tokens via Vault | Vault key co-located with oauth.json (no real security gain). Migration complexity. Startup ordering issues. |
+| SWEEP-017 | Memory entries Role::System | Not a real vulnerability (single-tenant). Role change causes LLM behavioral regression across all providers. |
+| SWEEP-703 | Shell tool sandbox | No zero-false-positive denylist exists. Any command filtering blocks legitimate commands (cargo, npm, etc.). Needs OS-level sandboxing (architecture decision). |
+| SWEEP-221 | Wire ResilientMemory | ResilientMemory has unbounded cache growth in healthy-primary path. Needs cache eviction strategy first. |
+
+### REMAINING (research complete, implementation deferred to next sweep)
+
+| ID | Fix | Confidence | Why Deferred |
+|----|-----|-----------|-------------|
+| SWEEP-018 | Rate limit retry w/ jitter | 90% | Agentic Core DIRECT, 5+ call sites in process_message(), needs E2E testing with live provider |
+| SWEEP-227 | Wire Watchdog into production | 90% | Agentic Core DIRECT, multi-file coordinated change, needs shutdown flow integration |
+| SWEEP-406 | Slack pagination | 85% | Needs Slack API testing with real workspace >200 channels |
 
 ---
 
