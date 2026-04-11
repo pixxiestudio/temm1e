@@ -8,6 +8,18 @@ A failed task, a silent crash, a truncated response — every one of these is a 
 
 ---
 
+## Zero-Risk Implementation Rule
+
+**Only fixes at 100% confidence and 0% risk of regression are implemented.** Everything else is deferred.
+
+1. Every fix must have a research artifact written BEFORE any code changes.
+2. The artifact must include: full code path analysis, exact files/lines to change, behavioral diff (before vs after), and E2E test scenarios.
+3. If confidence is not 100% after research — the fix goes on the **Deferred List** and is revisited in the next sweep or when more context is available.
+4. Deferred items are tracked in the sweep's `fix-plan.md` with the reason for deferral and what's needed to reach 100% confidence.
+5. There is no pressure to fix everything in one sweep. A fix that introduces a regression is worse than the original bug.
+
+---
+
 ## When to Run
 
 | Trigger | Scope |

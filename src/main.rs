@@ -2363,7 +2363,7 @@ async fn main() -> Result<()> {
 
             // ── Unified message channel ────────────────────────
             let (msg_tx, mut msg_rx) =
-                tokio::sync::mpsc::channel::<temm1e_core::types::message::InboundMessage>(32);
+                tokio::sync::mpsc::channel::<temm1e_core::types::message::InboundMessage>(128);
 
             // Track spawned task handles for graceful shutdown
             let mut task_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();

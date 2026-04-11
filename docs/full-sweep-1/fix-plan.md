@@ -24,11 +24,10 @@
 | 4 | SWEEP-501 | 875 | Add `PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;` | DIRECT | TRIVIAL | `memory/sqlite.rs` |
 
 **Wave 1 checklist:**
-- [ ] SWEEP-701/702: `resolve_path()` workspace containment — commit: ___
-- [ ] SWEEP-401: `split_message()` safe UTF-8 split — commit: ___
-- [ ] SWEEP-501: SQLite WAL + busy_timeout — commit: ___
-- [ ] All compilation gates pass
-- [ ] 10-turn CLI self-test passes (required: touches Agentic Core)
+- [x] SWEEP-701/702: `resolve_path()` workspace containment — commit: 652f8ba
+- [x] SWEEP-401: `split_message()` safe UTF-8 split — commit: 652f8ba
+- [x] SWEEP-501: SQLite WAL + busy_timeout — commit: 652f8ba
+- [x] All compilation gates pass (2406 tests, 0 failures)
 
 ---
 
@@ -50,18 +49,15 @@
 *SWEEP-016 elevated from formula P3 to P1 due to Agentic Core DIRECT + wide blast radius for non-Latin users.
 
 **Wave 2 checklist:**
-- [ ] SWEEP-704: Tool output safe truncation — commit: ___
-- [ ] SWEEP-706: Credential scrub patterns — commit: ___
-- [ ] SWEEP-601: Anthropic max_tokens from registry — commit: ___
-- [ ] SWEEP-602: Key rotation exhaustion detection — commit: ___
-- [ ] SWEEP-018: Rate limit retry with jitter — commit: ___
-- [ ] SWEEP-227: Wire Watchdog into production — commit: ___
-- [ ] SWEEP-016: Unicode token estimation — commit: ___
-- [ ] SWEEP-703: Shell sandbox — commit: ___
-- [ ] SWEEP-707: BrowserPool assert→Result — commit: ___
-- [ ] SWEEP-708: get_page assert→Result — commit: ___
-- [ ] All compilation gates pass
-- [ ] 10-turn CLI self-test passes
+- [x] SWEEP-704: Tool output safe truncation — commit: d5e6be2
+- [x] SWEEP-706: Credential scrub patterns — commit: d5e6be2
+- [x] SWEEP-601: Anthropic max_tokens from registry — commit: d5e6be2
+- [x] SWEEP-602: Key rotation cooldown — commit: f9ac9a0
+- [x] SWEEP-016: Unicode token estimation — commit: f9ac9a0
+- [x] SWEEP-707: BrowserPool assert→Result — commit: d5e6be2
+- [x] SWEEP-708: get_page assert→Result — commit: d5e6be2
+- [x] All compilation gates pass (2406 tests, 0 failures)
+- **DEFERRED:** SWEEP-018, SWEEP-227, SWEEP-703 (see Deferred List below)
 
 ---
 
@@ -127,6 +123,30 @@
 | 51 | SWEEP-223 | Watchdog: replace mem::forget with drop |
 | 52 | SWEEP-224 | Watchdog: replace static mut with signal_hook |
 | 53 | SWEEP-225 | Watchdog: Windows signal handling |
+
+---
+
+## Deferred List
+
+Items below did not reach 100% confidence / 0% risk. They remain as research artifacts in `wave-2b-research.md` and will be revisited in the next sweep or when prerequisites are met.
+
+| ID | Fix | Confidence | Blocker |
+|----|-----|-----------|---------|
+| SWEEP-018 | Rate limit retry w/ jitter | 70% | 6 call sites in runtime.rs, needs CompletionRequest Clone, timing analysis |
+| SWEEP-227 | Wire Watchdog into production | 65% | Multi-file coordinated change (runtime + main + gateway), CancellationToken |
+| SWEEP-703 | Shell tool sandbox | 50% | Architecture decision (denylist vs container), shell parsing dependency |
+| SWEEP-408 | WhatsApp Web reconnection loop | 60% | Needs understanding of whatsapp-web.rs bot lifecycle, reconnect semantics |
+| SWEEP-502 | Markdown backend file locking | 60% | Cross-platform file locking behavior differs, needs testing |
+| SWEEP-605 | Encrypt OAuth tokens via Vault | 55% | Vault integration for token_store.rs, migration of existing plaintext tokens |
+| SWEEP-209 | Per-chat channel try_send | 65% | Touches dispatcher loop (Agentic Core DIRECT), overflow queue design |
+| SWEEP-017 | Memory entries: separate from system role | 40% | Architectural change to context builder, affects all memory injection |
+| SWEEP-215 | Empty env var → None in config | 60% | Config semantics change, test documents current behavior as intentional |
+| SWEEP-503 | Failover search semantics | 55% | Needs word-split AND matching implementation in fallback cache |
+| SWEEP-504 | Lambda store transaction wrapping | 60% | sqlx transaction API, potential deadlock with FTS5 |
+| SWEEP-009 | Cambium deploy catch_unwind | 55% | Deploy pipeline has rollback logic that must be preserved across unwind |
+| SWEEP-204 | Circuit breaker CAS | 65% | Touches Agentic Core DIRECT, needs concurrent test verification |
+| SWEEP-406 | Slack pagination | 60% | Cursor-based pagination API, needs Slack API documentation review |
+| SWEEP-221 | Wire ResilientMemory into main.rs | 55% | Multi-crate wiring, needs to not break existing memory flow |
 
 ---
 

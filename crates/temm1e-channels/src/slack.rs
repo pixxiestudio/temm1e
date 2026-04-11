@@ -303,6 +303,9 @@ impl SlackChannel {
         if list.is_empty() {
             return false; // No one whitelisted yet
         }
+        if list.iter().any(|a| a == "*") {
+            return true;
+        }
         list.iter().any(|a| a == user_id)
     }
 }
