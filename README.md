@@ -820,6 +820,10 @@ Trust is **earned through track record**: 10 successful Level 3 changes graduate
 
 ### Tem Witness — The Agent Cannot Self-Mark Done
 
+<p align="center">
+  <img src="assets/tem-witness-overview.png" alt="Tem Witness System Overview" width="100%">
+</p>
+
 Every other lab above is a capability that makes Tem smarter. Witness is the capability that makes Tem *honest*. Every coding agent on the market — Claude Code, Codex, Aider, Cursor agent mode, Cline, Devin, every homegrown SWE-agent loop — has the same fundamental hole in its contract: **the agent is both the worker and the reporter of its own work.** Final messages are self-reports, and self-reports from optimization-pressured systems are exactly the signal you should never trust unconditionally. On umbrella tasks across large codebases, the convenient lie ("I've refactored X, Y, Z") ships quietly and the damage surfaces in production a week later.
 
 Witness ends that contract. Sealed into the `temm1e-witness` crate and wired into `AgentRuntime` between the `Finishing` and `Done` emissions of every `process_message` call, Witness gives Tem an **Oath / Witness / Ledger trinity** that executes on every task whether the agent asks for it or not:
