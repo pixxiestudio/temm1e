@@ -6983,6 +6983,7 @@ dependencies = [
  "sha2",
  "sqlx",
  "temm1e-anima",
+ "temm1e-cambium",
  "temm1e-core",
  "temm1e-distill",
  "temm1e-providers",

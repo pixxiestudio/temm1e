@@ -223,6 +223,38 @@ async fn law3_ledger_hash_chain_intact_after_verification() {
 }
 
 #[tokio::test]
+async fn runtime_with_cambium_trust_compiles_and_attaches() {
+    // Smoke test that the with_cambium_trust builder works end-to-end and
+    // the TrustEngine handle is attached. The actual record_verdict call
+    // happens inside the runtime gate, which requires a full process_message
+    // cycle — covered separately by run-time integration when needed.
+    use std::sync::Arc;
+    use temm1e_agent::runtime::AgentRuntime;
+    use temm1e_cambium::trust::TrustEngine;
+    use temm1e_core::types::cambium::TrustState;
+    use temm1e_test_utils::{MockMemory, MockProvider};
+    use temm1e_witness::config::WitnessStrictness;
+    use tokio::sync::Mutex;
+
+    let (witness, _dir) = bootstrap().await;
+    let trust = Arc::new(Mutex::new(TrustEngine::new(TrustState::default(), None)));
+
+    let provider: Arc<dyn temm1e_core::traits::Provider> =
+        Arc::new(MockProvider::with_text("ok"));
+    let memory: Arc<dyn temm1e_core::traits::Memory> = Arc::new(MockMemory::new());
+    let _runtime = AgentRuntime::new(provider, memory, vec![], "test-model".into(), None)
+        .with_witness(witness.clone(), WitnessStrictness::Block, true)
+        .with_cambium_trust(trust.clone());
+
+    // The runtime is constructed and the trust handle is reachable. Initial
+    // state: no verdicts recorded, no streak.
+    let t = trust.lock().await;
+    assert_eq!(t.state().level3_streak, 0);
+    assert_eq!(t.state().level2_streak, 0);
+    assert_eq!(t.state().recent_rollbacks, 0);
+}
+
+#[tokio::test]
 async fn runtime_with_witness_builder_attaches_witness() {
     // Construct a minimal AgentRuntime with a Witness attached via the
     // new with_witness() builder. This proves the plumbing compiles and

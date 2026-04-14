@@ -181,6 +181,18 @@ pub struct AgentRuntime {
     witness_strictness: temm1e_witness::config::WitnessStrictness,
     /// Whether to append the per-task Witness readout to the final reply.
     witness_show_readout: bool,
+    /// Cambium TrustEngine — when set, the gate hook calls
+    /// `record_verdict(passed, AutonomousBasic)` after every Witness verdict,
+    /// turning autonomy levels into evidence-bound state. Wraps in
+    /// tokio::sync::Mutex because TrustEngine is &mut self for write paths.
+    cambium_trust: Option<Arc<tokio::sync::Mutex<temm1e_cambium::trust::TrustEngine>>>,
+    /// When true AND `witness` is set, the runtime auto-seals a Planner-
+    /// generated Root Oath at the start of every non-trivial process_message
+    /// by calling `temm1e_witness::planner::seal_oath_via_planner`. The
+    /// generated Oath is sealed in the witness Ledger before the main agent
+    /// loop starts, so the gate hook at the end of the loop can verify it.
+    /// Adds one extra LLM call per Complex task. Default: false.
+    auto_seal_planner_oath: bool,
 }
 
 impl AgentRuntime {
@@ -226,6 +238,8 @@ impl AgentRuntime {
             witness: None,
             witness_strictness: temm1e_witness::config::WitnessStrictness::Observe,
             witness_show_readout: false,
+            cambium_trust: None,
+            auto_seal_planner_oath: false,
         }
     }
 
@@ -238,9 +252,7 @@ impl AgentRuntime {
     /// (the common case in Phase 2 while the Planner Oath generation is
     /// being built out), the gate is a no-op.
     ///
-    /// Cambium trust is NOT touched from here — the caller is responsible
-    /// for wiring `Verdict` → `TrustEngine::record_verdict` downstream if
-    /// they want evidence-bound trust levels.
+    /// Cambium trust wiring is now Phase 4 — see `with_cambium_trust()`.
     pub fn with_witness(
         mut self,
         witness: Arc<temm1e_witness::Witness>,
@@ -250,6 +262,46 @@ impl AgentRuntime {
         self.witness = Some(witness);
         self.witness_strictness = strictness;
         self.witness_show_readout = show_readout;
+        self
+    }
+
+    /// Attach a Cambium `TrustEngine` to this runtime.
+    ///
+    /// When BOTH `with_witness(...)` and `with_cambium_trust(...)` are set,
+    /// the runtime gate calls `trust.record_verdict(passed, level)` after
+    /// every Witness verdict. PASS verdicts feed `record_success`, FAIL
+    /// verdicts feed `record_failure`, Inconclusive verdicts are deliberately
+    /// skipped (Witness couldn't decide, so trust shouldn't move either way).
+    ///
+    /// Wraps the engine in `tokio::sync::Mutex` because `TrustEngine`'s
+    /// write paths take `&mut self`. The lock is held only for the duration
+    /// of `record_verdict` — it is not held across any await points outside
+    /// the call itself.
+    pub fn with_cambium_trust(
+        mut self,
+        trust: Arc<tokio::sync::Mutex<temm1e_cambium::trust::TrustEngine>>,
+    ) -> Self {
+        self.cambium_trust = Some(trust);
+        self
+    }
+
+    /// Enable Phase 4 auto-Oath generation by the Planner.
+    ///
+    /// When this is set AND `with_witness(...)` is also set, the runtime
+    /// will call `temm1e_witness::planner::seal_oath_via_planner` at the
+    /// start of every `process_message` call. The Planner LLM is invoked
+    /// with the static `OATH_GENERATION_PROMPT` plus the user's request,
+    /// the response is parsed into a Root Oath, and the Oath is sealed in
+    /// the Witness Ledger. The gate hook at the end of the agent loop will
+    /// then verify it.
+    ///
+    /// Adds **one extra LLM call per process_message** (clean-slate context,
+    /// max_tokens=1024). Cost on a typical model: ~$0.001 per call. Failures
+    /// (LLM error, parse error, Spec Reviewer rejection) are non-fatal —
+    /// they're logged and the runtime proceeds with no sealed Oath, so the
+    /// gate hook becomes a no-op for that session (Law 5: zero downside).
+    pub fn with_auto_planner_oath(mut self, enabled: bool) -> Self {
+        self.auto_seal_planner_oath = enabled;
         self
     }
 
@@ -329,6 +381,8 @@ impl AgentRuntime {
             witness: None,
             witness_strictness: temm1e_witness::config::WitnessStrictness::Observe,
             witness_show_readout: false,
+            cambium_trust: None,
+            auto_seal_planner_oath: false,
         }
     }
 
@@ -488,6 +542,54 @@ impl AgentRuntime {
             user_id = %msg.user_id,
             "Processing inbound message"
         );
+
+        // ── Phase 4: auto-seal a Planner-generated Root Oath ────────
+        // When witness + auto_seal_planner_oath are both configured, ask the
+        // Planner LLM to emit a Root Oath for this user message and seal it
+        // in the Witness ledger BEFORE the main agent loop starts. The gate
+        // hook at the end of the loop will then verify this Oath against
+        // whatever the agent produces.
+        //
+        // Failures (LLM error, parse error, Spec Reviewer rejection) are
+        // non-fatal — Law 5: zero downside. The hook simply skips on failure
+        // and the runtime proceeds with no sealed Oath, making the gate hook
+        // a no-op for this session.
+        if self.auto_seal_planner_oath {
+            if let Some(ref witness) = self.witness {
+                let user_text = msg.text.as_deref().unwrap_or("");
+                if !user_text.trim().is_empty() {
+                    match temm1e_witness::planner::seal_oath_via_planner(
+                        witness,
+                        self.provider.clone(),
+                        self.model.clone(),
+                        user_text,
+                        &session.workspace_path,
+                        session.session_id.clone(),
+                        format!("root-{}", session.session_id),
+                        format!("rootst-{}", session.session_id),
+                    )
+                    .await
+                    {
+                        Ok((sealed, entry_id)) => {
+                            tracing::info!(
+                                session_id = %session.session_id,
+                                oath_hash = %sealed.sealed_hash[..16.min(sealed.sealed_hash.len())],
+                                ledger_entry_id = entry_id,
+                                postcondition_count = sealed.postconditions.len(),
+                                "phase4: planner oath sealed for session"
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                session_id = %session.session_id,
+                                error = %e,
+                                "phase4: planner oath generation failed (Law 5: continuing without)"
+                            );
+                        }
+                    }
+                }
+            }
+        }
 
         // ── Status emission helper ──────────────────────────────
         // Infallible: send_modify never panics, never allocates.
@@ -1891,6 +1993,39 @@ impl AgentRuntime {
                                     latency_ms = verdict.latency_ms,
                                     "witness verdict rendered"
                                 );
+
+                                // Phase 4: feed the verdict outcome into the
+                                // Cambium TrustEngine if one is attached.
+                                // Inconclusive verdicts are deliberately
+                                // skipped — Witness couldn't decide, so trust
+                                // shouldn't move either way.
+                                if let Some(ref trust) = self.cambium_trust {
+                                    use temm1e_witness::types::VerdictOutcome;
+                                    match verdict.outcome {
+                                        VerdictOutcome::Pass => {
+                                            let mut t = trust.lock().await;
+                                            t.record_verdict(
+                                                true,
+                                                temm1e_core::types::cambium::TrustLevel::AutonomousBasic,
+                                            );
+                                            tracing::debug!("cambium trust: recorded PASS verdict");
+                                        }
+                                        VerdictOutcome::Fail => {
+                                            let mut t = trust.lock().await;
+                                            t.record_verdict(
+                                                false,
+                                                temm1e_core::types::cambium::TrustLevel::AutonomousBasic,
+                                            );
+                                            tracing::debug!("cambium trust: recorded FAIL verdict");
+                                        }
+                                        VerdictOutcome::Inconclusive => {
+                                            tracing::debug!(
+                                                "cambium trust: skipping inconclusive verdict"
+                                            );
+                                        }
+                                    }
+                                }
+
                                 reply_text = witness.compose_final_reply_ex(
                                     &reply_text,
                                     &verdict,

@@ -121,6 +121,76 @@ pub fn build_planner_user_prompt(user_request: &str, active_sets: &[String]) -> 
     )
 }
 
+/// End-to-end Oath generation via a real LLM Provider call.
+///
+/// This is the Phase 4 wiring point — it makes a clean-slate LLM call with
+/// the static `OATH_GENERATION_PROMPT` system prompt, parses the JSON
+/// response, builds an `Oath` from the draft, and seals it via
+/// `oath::seal_oath` (which runs the Spec Reviewer + writes to the Ledger).
+///
+/// **Single-model policy**: uses the same Provider/model the agent runs.
+/// **Clean-slate context**: no conversation history, no tool schema, no
+/// prior reasoning — only the static prompt + user request + active sets.
+/// **Failure mode**: returns Err on any stage (LLM error, parse error,
+/// Spec Reviewer rejection, sealing error). The caller is responsible for
+/// deciding whether to retry, fall back to a default Oath, or skip Witness
+/// for this session.
+pub async fn seal_oath_via_planner(
+    witness: &std::sync::Arc<crate::witness::Witness>,
+    provider: std::sync::Arc<dyn temm1e_core::traits::Provider>,
+    model: impl Into<String>,
+    user_request: &str,
+    workspace_root: &std::path::Path,
+    session_id: impl Into<String>,
+    root_goal_id: impl Into<String>,
+    subtask_id: impl Into<String>,
+) -> Result<(crate::types::Oath, i64), WitnessError> {
+    use temm1e_core::types::message::{
+        ChatMessage, CompletionRequest, MessageContent, Role,
+    };
+
+    let active_sets = crate::auto_detect::detect_active_sets(workspace_root);
+    let user_prompt = build_planner_user_prompt(user_request, &active_sets);
+
+    let req = CompletionRequest {
+        model: model.into(),
+        messages: vec![ChatMessage {
+            role: Role::User,
+            content: MessageContent::Text(user_prompt),
+        }],
+        tools: vec![],
+        max_tokens: Some(1024),
+        temperature: Some(0.0),
+        system: Some(OATH_GENERATION_PROMPT.to_string()),
+    };
+
+    let resp = provider
+        .complete(req)
+        .await
+        .map_err(|e| WitnessError::Internal(format!("planner LLM call: {e}")))?;
+
+    // Extract text from the response.
+    let text = resp
+        .content
+        .iter()
+        .filter_map(|p| match p {
+            temm1e_core::types::message::ContentPart::Text { text } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let draft = parse_planner_oath(&text)?;
+    let oath = oath_from_draft(
+        draft,
+        subtask_id,
+        root_goal_id,
+        session_id,
+        workspace_root,
+    );
+    crate::oath::seal_oath(witness.ledger(), oath).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
