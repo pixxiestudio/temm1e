@@ -220,6 +220,8 @@ pub async fn classify_message(
     // preventing the model from classifying/responding to older messages.
     //
     // Strip tool messages — the classifier only needs user/assistant text.
+    // Also strip ToolUse/ToolResult parts from Assistant messages to avoid
+    // orphaned tool_use blocks (which cause Anthropic 400 errors).
     let text_messages: Vec<ChatMessage> = history
         .iter()
         .filter(|msg| !matches!(msg.role, Role::Tool))
@@ -232,6 +234,29 @@ pub async fn classify_message(
             true
         })
         .cloned()
+        .map(|mut msg| {
+            // Strip ToolUse/ToolResult parts from messages — the classifier
+            // only needs text content, and keeping ToolUse without ToolResult
+            // creates orphaned tool_use blocks that Anthropic rejects.
+            if let MessageContent::Parts(ref mut parts) = msg.content {
+                parts.retain(|p| {
+                    !matches!(
+                        p,
+                        ContentPart::ToolUse { .. } | ContentPart::ToolResult { .. }
+                    )
+                });
+                if parts.len() == 1 {
+                    if let Some(ContentPart::Text { text }) = parts.first().cloned() {
+                        msg.content = MessageContent::Text(text);
+                    }
+                }
+            }
+            msg
+        })
+        .filter(|msg| match &msg.content {
+            MessageContent::Text(t) => !t.is_empty(),
+            MessageContent::Parts(parts) => !parts.is_empty(),
+        })
         .collect::<Vec<_>>();
 
     // Split: last message is the CURRENT one, prior messages are context

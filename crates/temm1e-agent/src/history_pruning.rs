@@ -193,9 +193,14 @@ pub fn group_into_turns(messages: &[ChatMessage]) -> Vec<ConversationTurn> {
     turns
 }
 
-/// Remove orphaned `tool_result` messages whose `tool_use_id` doesn't match
-/// any `tool_use` in the message list. This is a safety net applied after
-/// all pruning to catch pre-existing orphans from crashes or prior bugs.
+/// Remove orphaned tool messages whose counterpart is missing:
+/// - `tool_result` messages whose `tool_use_id` has no matching `tool_use`
+/// - `tool_use` parts in messages whose ID has no matching `tool_result`
+///
+/// This is a safety net applied after all pruning to catch orphans from
+/// history stripping, crashes, or prior bugs. Both directions must be
+/// handled: stripping older history can remove `tool_result` while keeping
+/// `tool_use`, and vice versa.
 pub fn remove_orphaned_tool_results(messages: &mut Vec<ChatMessage>) {
     // Collect all tool_use IDs present in the messages
     let tool_use_ids: HashSet<String> = messages
@@ -212,9 +217,13 @@ pub fn remove_orphaned_tool_results(messages: &mut Vec<ChatMessage>) {
         })
         .collect();
 
+    // Collect all tool_result IDs present in the messages
+    let tool_result_ids: HashSet<String> =
+        messages.iter().flat_map(extract_tool_result_ids).collect();
+
     let before = messages.len();
 
-    // Remove messages that contain only tool_results referencing missing tool_use IDs
+    // Phase 1: Remove messages that contain only tool_results referencing missing tool_use IDs
     messages.retain(|msg| {
         let result_ids = extract_tool_result_ids(msg);
         if result_ids.is_empty() {
@@ -224,11 +233,44 @@ pub fn remove_orphaned_tool_results(messages: &mut Vec<ChatMessage>) {
         result_ids.iter().all(|id| tool_use_ids.contains(id))
     });
 
-    let removed = before - messages.len();
-    if removed > 0 {
+    let removed_results = before - messages.len();
+
+    // Phase 2: Strip orphaned tool_use parts (no matching tool_result)
+    let mut tool_use_parts_stripped = 0usize;
+    for msg in messages.iter_mut() {
+        if let MessageContent::Parts(parts) = &mut msg.content {
+            let count_before = parts.len();
+            parts.retain(|p| match p {
+                ContentPart::ToolUse { id, .. } => {
+                    // Keep only if a matching tool_result exists
+                    tool_result_ids.contains(id)
+                }
+                _ => true,
+            });
+            tool_use_parts_stripped += count_before - parts.len();
+
+            // Flatten Parts([Text{...}]) -> Text(...) when only text remains
+            if parts.len() == 1 {
+                if let Some(ContentPart::Text { text }) = parts.first().cloned() {
+                    msg.content = MessageContent::Text(text);
+                }
+            }
+        }
+    }
+
+    // Remove messages that became empty after stripping
+    messages.retain(|msg| match &msg.content {
+        MessageContent::Text(t) => !t.is_empty(),
+        MessageContent::Parts(parts) => !parts.is_empty(),
+    });
+
+    let total_removed = before - messages.len();
+    if total_removed > 0 || tool_use_parts_stripped > 0 {
         warn!(
-            removed,
-            "Removed orphaned tool_result messages (no matching tool_use)"
+            orphaned_results_removed = removed_results,
+            orphaned_tool_use_parts_stripped = tool_use_parts_stripped,
+            total_messages_removed = total_removed,
+            "Removed orphaned tool messages (missing counterparts)"
         );
     }
 }

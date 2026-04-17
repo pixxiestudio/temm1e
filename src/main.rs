@@ -6219,6 +6219,11 @@ Just type a message to chat with the AI agent.",
             let pp_opt = config.agent.parallel_phases;
 
             let mut agent_opt: Option<temm1e_agent::AgentRuntime> = None;
+            let cli_perp_instance: Arc<
+                tokio::sync::RwLock<Option<Arc<temm1e_perpetuum::Perpetuum>>>,
+            > = Arc::new(tokio::sync::RwLock::new(None));
+            let cli_perp_temporal: Arc<tokio::sync::RwLock<String>> =
+                Arc::new(tokio::sync::RwLock::new(String::new()));
 
             tracing::info!(
                 has_credentials = credentials.is_some(),
@@ -6397,8 +6402,6 @@ Just type a message to chat with the AI agent.",
                                 );
                             }
                             // ── Perpetuum: init for CLI chat ──────────
-                            let cli_perpetuum_temporal: Arc<tokio::sync::RwLock<String>> =
-                                Arc::new(tokio::sync::RwLock::new(String::new()));
                             if config.perpetuum.enabled {
                                 let perpetuum_db = dirs::home_dir()
                                     .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -6481,7 +6484,7 @@ Just type a message to chat with the AI agent.",
                                             social_storage.clone(),
                                             Some(social_config_captured.clone()),
                                         )
-                                        .with_perpetuum_temporal(cli_perpetuum_temporal.clone());
+                                        .with_perpetuum_temporal(cli_perp_temporal.clone());
                                         if config.consciousness.enabled {
                                             rt2 = rt2.with_consciousness(
                                                 temm1e_agent::consciousness_engine::ConsciousnessEngine::new(
@@ -6505,6 +6508,12 @@ Just type a message to chat with the AI agent.",
                                         }
                                         rt = rt2;
                                         p.start();
+                                        // Populate temporal context immediately so the first
+                                        // message has time awareness
+                                        let initial_temporal =
+                                            p.temporal_injection("standard").await;
+                                        *cli_perp_temporal.write().await = initial_temporal;
+                                        *cli_perp_instance.write().await = Some(p.clone());
                                         tracing::info!("Perpetuum runtime started (CLI chat)");
                                     }
                                     Err(e) => {
@@ -6512,7 +6521,7 @@ Just type a message to chat with the AI agent.",
                                     }
                                 }
                             }
-                            rt = rt.with_perpetuum_temporal(cli_perpetuum_temporal);
+                            rt = rt.with_perpetuum_temporal(cli_perp_temporal.clone());
 
                             agent_opt = Some(rt);
                             println!("Connected to {} (model: {})", pname, model);
@@ -7539,6 +7548,12 @@ Just type a message to chat with the AI agent.",
                 }
 
                 // ── Normal agent processing ────────────────────
+                // Perpetuum: refresh temporal context before each turn
+                if let Some(ref perp) = *cli_perp_instance.read().await {
+                    perp.record_user_interaction().await;
+                    let temporal = perp.temporal_injection("standard").await;
+                    *cli_perp_temporal.write().await = temporal;
+                }
                 if let Some(ref agent) = agent_opt {
                     let mut session = temm1e_core::types::session::SessionContext {
                         session_id: "cli-cli".to_string(),

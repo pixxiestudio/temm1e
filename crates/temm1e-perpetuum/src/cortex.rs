@@ -126,13 +126,13 @@ impl Cortex {
     }
 
     async fn fire_alarm(&self, concern: &StoredConcern) -> Result<(), Temm1eError> {
-        let config: serde_json::Value = serde_json::from_str(&concern.config_json)
+        let config: ConcernConfig = serde_json::from_str(&concern.config_json)
             .map_err(|e| Temm1eError::Config(format!("Parse alarm config: {e}")))?;
 
-        let message = config
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Alarm!");
+        let message = match &config {
+            ConcernConfig::Alarm { message, .. } => message.as_str(),
+            _ => "Alarm!",
+        };
 
         let alarm_name = &concern.name;
         let notification = format!("⏰ Alarm \"{alarm_name}\": {message}");
@@ -152,21 +152,19 @@ impl Cortex {
     }
 
     async fn fire_monitor(&self, concern: &StoredConcern) -> Result<(), Temm1eError> {
-        let config: serde_json::Value = serde_json::from_str(&concern.config_json)
+        let config: ConcernConfig = serde_json::from_str(&concern.config_json)
             .map_err(|e| Temm1eError::Config(format!("Parse monitor config: {e}")))?;
 
-        let check: MonitorCheck = serde_json::from_value(
-            config
-                .get("check")
-                .cloned()
-                .unwrap_or(serde_json::Value::Null),
-        )
-        .map_err(|e| Temm1eError::Config(format!("Parse monitor check: {e}")))?;
-
-        let user_intent = config
-            .get("user_intent")
-            .and_then(|s| s.as_str())
-            .unwrap_or("");
+        let (check, user_intent) = match &config {
+            ConcernConfig::Monitor {
+                check, user_intent, ..
+            } => (check.clone(), user_intent.as_str()),
+            _ => {
+                return Err(Temm1eError::Config(
+                    "Expected Monitor config variant".to_string(),
+                ));
+            }
+        };
 
         // 1. Execute the check
         let result = monitor::execute_check(&check).await?;
@@ -247,15 +245,12 @@ impl Cortex {
         user_intent: &str,
     ) -> Result<(), Temm1eError> {
         let history = self.store.monitor_history(&concern.id, 20).await?;
-        let config: serde_json::Value =
-            serde_json::from_str(&concern.config_json).unwrap_or_default();
-        let schedule: Schedule = serde_json::from_value(
-            config
-                .get("schedule")
-                .cloned()
-                .unwrap_or(serde_json::Value::Null),
-        )
-        .unwrap_or(Schedule::Every(Duration::from_secs(300)));
+        let config: ConcernConfig = serde_json::from_str(&concern.config_json)
+            .map_err(|e| Temm1eError::Config(format!("Parse monitor config for review: {e}")))?;
+        let schedule = match &config {
+            ConcernConfig::Monitor { schedule, .. } => schedule.clone(),
+            _ => Schedule::Every(Duration::from_secs(300)),
+        };
 
         let current_secs = match &schedule {
             Schedule::Every(d) => d.as_secs(),
@@ -284,10 +279,24 @@ impl Cortex {
         if review.action == "adjust" {
             if let Some(new_secs) = review.new_interval_secs {
                 let new_secs = new_secs.clamp(10, 86400); // 10s to 24h
-                let mut updated_config = config;
-                updated_config["schedule"] =
-                    serde_json::to_value(Schedule::Every(Duration::from_secs(new_secs)))
-                        .unwrap_or_default();
+                let updated_config = match config {
+                    ConcernConfig::Monitor {
+                        name,
+                        user_intent: ui,
+                        check,
+                        notify_chat_id,
+                        notify_channel,
+                        ..
+                    } => ConcernConfig::Monitor {
+                        name,
+                        user_intent: ui,
+                        schedule: Schedule::Every(Duration::from_secs(new_secs)),
+                        check,
+                        notify_chat_id,
+                        notify_channel,
+                    },
+                    other => other,
+                };
 
                 let mut updated = concern.clone();
                 updated.config_json = serde_json::to_string(&updated_config).unwrap_or_default();
@@ -314,12 +323,14 @@ impl Cortex {
     }
 
     async fn fire_recurring(&self, concern: &StoredConcern) -> Result<(), Temm1eError> {
-        let config: serde_json::Value =
-            serde_json::from_str(&concern.config_json).unwrap_or_default();
-        let description = config
-            .get("action_description")
-            .and_then(|s| s.as_str())
-            .unwrap_or("Recurring task");
+        let config: ConcernConfig = serde_json::from_str(&concern.config_json)
+            .map_err(|e| Temm1eError::Config(format!("Parse recurring config: {e}")))?;
+        let description = match &config {
+            ConcernConfig::Recurring {
+                action_description, ..
+            } => action_description.as_str(),
+            _ => "Recurring task",
+        };
 
         let notification = format!("🔄 Recurring \"{}\": {description}", concern.name);
         self.notify_user(concern, &notification).await?;

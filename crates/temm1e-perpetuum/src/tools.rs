@@ -321,7 +321,7 @@ impl Tool for CancelConcernTool {
         serde_json::json!({
             "type": "object",
             "properties": {
-                "id": {"type": "string", "description": "Concern ID (or first 8 chars)"}
+                "id": {"type": "string", "description": "Concern ID, ID prefix, or name"}
             },
             "required": ["id"]
         })
@@ -336,9 +336,11 @@ impl Tool for CancelConcernTool {
     ) -> Result<ToolOutput, Temm1eError> {
         let id = input.arguments["id"].as_str().unwrap_or("");
 
-        // Support partial ID matching
+        // Support partial ID and name matching
         let concerns = self.0.list_concerns().await;
-        let matched = concerns.iter().find(|c| c.id.starts_with(id) || c.id == id);
+        let matched = concerns
+            .iter()
+            .find(|c| c.id.starts_with(id) || c.id == id || c.name == id);
 
         match matched {
             Some(c) => {
@@ -374,7 +376,7 @@ impl Tool for AdjustScheduleTool {
         serde_json::json!({
             "type": "object",
             "properties": {
-                "id": {"type": "string", "description": "Concern ID (or prefix)"},
+                "id": {"type": "string", "description": "Concern ID, ID prefix, or name"},
                 "interval_secs": {"type": "integer", "description": "New interval in seconds"}
             },
             "required": ["id", "interval_secs"]
@@ -392,7 +394,9 @@ impl Tool for AdjustScheduleTool {
         let interval = input.arguments["interval_secs"].as_u64().unwrap_or(300);
 
         let concerns = self.0.list_concerns().await;
-        let matched = concerns.iter().find(|c| c.id.starts_with(id) || c.id == id);
+        let matched = concerns
+            .iter()
+            .find(|c| c.id.starts_with(id) || c.id == id || c.name == id);
 
         match matched {
             Some(c) => {
