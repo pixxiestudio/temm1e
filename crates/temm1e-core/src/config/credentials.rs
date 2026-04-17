@@ -216,28 +216,28 @@ pub fn detect_api_key(text: &str) -> Option<DetectedCredential> {
             match p.as_str() {
                 "anthropic" | "openai" | "gemini" | "grok" | "xai" | "openrouter" | "minimax"
                 | "stepfun" | "step" | "zai" | "zhipu" | "ollama" | "lmstudio" | "lm-studio"
-                | "github" | "gh" => {
-                    if key.len() >= 8 && !is_placeholder_key(key) {
-                        return Some(DetectedCredential {
-                            provider: match p.as_str() {
-                                "anthropic" => "anthropic",
-                                "openai" => "openai",
-                                "gemini" => "gemini",
-                                "grok" | "xai" => "grok",
-                                "openrouter" => "openrouter",
-                                "minimax" => "minimax",
-                                "stepfun" | "step" => "stepfun",
-                                "zai" | "zhipu" => "zai",
-                                "ollama" => "ollama",
-                                "lmstudio" | "lm-studio" => "lmstudio",
-                                "github" | "gh" => "github",
-                                _ => unreachable!(),
-                            },
-                            api_key: key.to_string(),
-                            base_url: None,
-                            model: None,
-                        });
-                    }
+                | "github" | "gh"
+                    if key.len() >= 8 && !is_placeholder_key(key) =>
+                {
+                    return Some(DetectedCredential {
+                        provider: match p.as_str() {
+                            "anthropic" => "anthropic",
+                            "openai" => "openai",
+                            "gemini" => "gemini",
+                            "grok" | "xai" => "grok",
+                            "openrouter" => "openrouter",
+                            "minimax" => "minimax",
+                            "stepfun" | "step" => "stepfun",
+                            "zai" | "zhipu" => "zai",
+                            "ollama" => "ollama",
+                            "lmstudio" | "lm-studio" => "lmstudio",
+                            "github" | "gh" => "github",
+                            _ => unreachable!(),
+                        },
+                        api_key: key.to_string(),
+                        base_url: None,
+                        model: None,
+                    });
                 }
                 _ => {}
             }
