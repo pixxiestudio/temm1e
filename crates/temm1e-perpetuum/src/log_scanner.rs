@@ -122,7 +122,7 @@ pub fn scan_recent_errors(log_path: &Path, hours: u32, min_count: u32) -> Vec<Er
         .into_values()
         .filter(|g| g.count >= min_count)
         .collect();
-    result.sort_by(|a, b| b.count.cmp(&a.count));
+    result.sort_by_key(|e| std::cmp::Reverse(e.count));
     result
 }
 

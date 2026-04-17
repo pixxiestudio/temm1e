@@ -456,7 +456,7 @@ fn collate_by_provider(rows: &[ResultRow]) -> Vec<(String, ProviderStats)> {
             )
         })
         .collect();
-    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out.sort_by_key(|e| e.0.clone());
     out
 }
 
