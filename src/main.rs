@@ -5344,12 +5344,25 @@ Just type a message to chat with the AI agent.",
                                                                             read_tracker: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new())),
                                                                         };
                                                                         match mini.process_message(&mini_msg, &mut s, None, None, None, None, None).await {
-                                                                            Ok((r, u)) => Ok(temm1e_hive::worker::TaskResult {
-                                                                                summary: r.text, tokens_used: u.combined_tokens(),
-                                                                                artifacts: vec![], success: true, error: None,
-                                                                            }),
+                                                                            Ok((r, u)) => {
+                                                                                // P3: read worker's isolated budget for
+                                                                                // accurate per-task accounting.
+                                                                                let snap = mini.budget_snapshot();
+                                                                                Ok(temm1e_hive::worker::TaskResult {
+                                                                                    summary: r.text,
+                                                                                    tokens_used: u.combined_tokens(),
+                                                                                    input_tokens: snap.input_tokens,
+                                                                                    output_tokens: snap.output_tokens,
+                                                                                    cost_usd: snap.cost_usd,
+                                                                                    artifacts: vec![], success: true, error: None,
+                                                                                })
+                                                                            }
                                                                             Err(e) => Ok(temm1e_hive::worker::TaskResult {
-                                                                                summary: String::new(), tokens_used: 0,
+                                                                                summary: String::new(),
+                                                                                tokens_used: 0,
+                                                                                input_tokens: 0,
+                                                                                output_tokens: 0,
+                                                                                cost_usd: 0.0,
                                                                                 artifacts: vec![], success: false, error: Some(e.to_string()),
                                                                             }),
                                                                         }

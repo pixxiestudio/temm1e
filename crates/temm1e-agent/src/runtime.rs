@@ -2763,6 +2763,13 @@ impl AgentRuntime {
         self.memory.as_ref()
     }
 
+    /// Atomic snapshot of this runtime's accumulated token/cost totals.
+    /// Used by the JIT swarm worker flow to return usage to the parent
+    /// without sharing a mutable BudgetTracker instance.
+    pub fn budget_snapshot(&self) -> budget::BudgetSnapshot {
+        self.budget.snapshot()
+    }
+
     /// Get the memory backend as an Arc.
     pub fn memory_arc(&self) -> Arc<dyn Memory> {
         self.memory.clone()

@@ -209,6 +209,9 @@ async fn run_swarm(
                     Ok(temm1e_hive::worker::TaskResult {
                         summary: text,
                         tokens_used: inp + out,
+                        input_tokens: inp as u64,
+                        output_tokens: out as u64,
+                        cost_usd: 0.0,
                         artifacts: vec![],
                         success: true,
                         error: None,
